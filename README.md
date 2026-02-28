@@ -1,5 +1,7 @@
 # haiku-runner
 
+[![docs-vercel](https://github.com/mr-u0b0dy/haiku-runner/actions/workflows/docs-vercel.yml/badge.svg)](https://github.com/mr-u0b0dy/haiku-runner/actions/workflows/docs-vercel.yml)
+
 Zephyr-based BLE speaker scaffold for `nrf5340dk_nrf5340_cpuapp` with a multi-input architecture.
 
 ## Current scope
@@ -16,6 +18,7 @@ Zephyr-based BLE speaker scaffold for `nrf5340dk_nrf5340_cpuapp` with a multi-in
 - `app/` Zephyr app
 - `docs/` architecture and bring-up guides
 - `docs/test-hardware/` test bench layout, components, and setup guide
+- `docs-site/` shadcn-docs-nuxt documentation site
 - `.github/workflows/` CI build workflow
 
 ## Quick start
@@ -29,6 +32,16 @@ Zephyr-based BLE speaker scaffold for `nrf5340dk_nrf5340_cpuapp` with a multi-in
 
 See `docs/build.md` for details.
 See `docs/test-hardware/README.md` for test bench documentation.
+
+## Documentation site (shadcn-docs-nuxt)
+
+```bash
+cd docs-site
+npm install
+npm run dev
+```
+
+This serves docs locally (default: `http://localhost:3000`) using `shadcn-docs-nuxt`.
 
 ## License
 
