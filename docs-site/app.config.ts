@@ -5,8 +5,8 @@ export default defineAppConfig({
       description: 'Documentation for the Zephyr-based BLE speaker scaffold and test workflows.',
     },
     theme: {
-      customizable: true,
-      color: 'zinc',
+      customizable: false,
+      color: 'blue',
       radius: 0.5,
     },
     header: {
