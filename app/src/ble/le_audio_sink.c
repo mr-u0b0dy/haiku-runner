@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <zephyr/logging/log.h>
 
+#include "input_frame_ingress.h"
 #include "input_registry.h"
 #include "le_audio_sink.h"
 
@@ -51,20 +52,14 @@ int le_audio_sink_receive_frame(const uint8_t *data,
                                 uint8_t channels,
                                 uint8_t bits_per_sample)
 {
-  if (!g_link_up || g_callback == NULL || data == NULL || size == 0U) {
-    return -EINVAL;
-  }
-
-  struct audio_frame frame = {
-    .data = data,
-    .size = size,
-    .sample_rate_hz = sample_rate_hz,
-    .channels = channels,
-    .bits_per_sample = bits_per_sample,
-  };
-
-  g_callback(AUDIO_INPUT_BLE, &frame);
-  return 0;
+  return input_frame_ingress_deliver(g_callback,
+                                     g_link_up,
+                                     AUDIO_INPUT_BLE,
+                                     data,
+                                     size,
+                                     sample_rate_hz,
+                                     channels,
+                                     bits_per_sample);
 }
 
 static const struct audio_input_ops g_ble_ops = {

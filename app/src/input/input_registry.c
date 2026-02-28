@@ -12,6 +12,10 @@ int input_registry_register(const struct audio_input_descriptor *descriptor)
     return -EINVAL;
   }
 
+  if (input_registry_get(descriptor->id) != NULL) {
+    return -EALREADY;
+  }
+
   if (g_input_count >= ARRAY_SIZE(g_inputs)) {
     return -ENOMEM;
   }
