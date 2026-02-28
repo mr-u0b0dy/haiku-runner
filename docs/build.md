@@ -37,3 +37,5 @@ Optional tuning:
 
 - `CONFIG_HR_INPUT_USB_C_MOCK_INTERVAL_MS=10`
 - `CONFIG_HR_INPUT_USB_C_MOCK_CHUNK_BYTES=240`
+
+For full bench setup, component list, and validation flow, see `docs/test-hardware/README.md`.

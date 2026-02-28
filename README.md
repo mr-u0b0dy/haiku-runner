@@ -15,6 +15,7 @@ Zephyr-based BLE speaker scaffold for `nrf5340dk_nrf5340_cpuapp` with a multi-in
 
 - `app/` Zephyr app
 - `docs/` architecture and bring-up guides
+- `docs/test-hardware/` test bench layout, components, and setup guide
 - `.github/workflows/` CI build workflow
 
 ## Quick start
@@ -27,6 +28,7 @@ Zephyr-based BLE speaker scaffold for `nrf5340dk_nrf5340_cpuapp` with a multi-in
    - `west build -b nrf5340dk_nrf5340_cpuapp app --sysbuild`
 
 See `docs/build.md` for details.
+See `docs/test-hardware/README.md` for test bench documentation.
 
 ## License
 
