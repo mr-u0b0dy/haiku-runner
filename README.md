@@ -1,7 +1,5 @@
 # haiku-runner
 
-[![docs-vercel](https://github.com/mr-u0b0dy/haiku-runner/actions/workflows/docs-vercel.yml/badge.svg)](https://github.com/mr-u0b0dy/haiku-runner/actions/workflows/docs-vercel.yml)
-
 Zephyr-based BLE speaker scaffold for `nrf5340dk_nrf5340_cpuapp` with a multi-input architecture.
 
 ## Current scope
