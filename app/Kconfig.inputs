@@ -38,6 +38,29 @@ config HR_INPUT_USB_C_BITS_PER_SAMPLE
   default 16
   range 8 32
 
+config HR_INPUT_USB_C_MOCK_FEEDER
+  bool "Enable mock USB-C PCM feeder thread"
+  default n
+
+if HR_INPUT_USB_C_MOCK_FEEDER
+
+config HR_INPUT_USB_C_MOCK_INTERVAL_MS
+  int "Mock feeder interval (ms)"
+  default 10
+  range 1 1000
+
+config HR_INPUT_USB_C_MOCK_CHUNK_BYTES
+  int "Mock feeder bytes per interval"
+  default 240
+  range 48 2048
+
+config HR_INPUT_USB_C_MOCK_STACK_SIZE
+  int "Mock feeder thread stack size"
+  default 1024
+  range 512 4096
+
+endif
+
 endif
 
 config HR_INPUT_WIFI

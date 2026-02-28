@@ -37,6 +37,9 @@ endif()
 
 if(CONFIG_HR_INPUT_USB_C)
   target_sources(app PRIVATE src/input/input_usb_c_uac.c)
+  if(CONFIG_HR_INPUT_USB_C_MOCK_FEEDER)
+    target_sources(app PRIVATE src/input/input_usb_c_mock_feeder.c)
+  endif()
 endif()
 
 if(CONFIG_HR_INPUT_WIFI)

@@ -1,4 +1,5 @@
 build/
+build-*/
 .west/
 zephyr/
 modules/
