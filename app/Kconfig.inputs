@@ -1,0 +1,23 @@
+menu "Input Sources"
+
+config HR_INPUT_BLE
+  bool "Enable BLE input adapter"
+  default y
+
+config HR_INPUT_AUX
+  bool "Enable AUX jack input adapter"
+  default n
+
+config HR_INPUT_USB_C
+  bool "Enable USB Type-C UAC input adapter"
+  default n
+
+config HR_INPUT_WIFI
+  bool "Enable Wi-Fi streaming input adapter"
+  default n
+
+config HR_SWITCH_ALLOW_AUTO_FALLBACK
+  bool "Allow auto fallback when active source is unhealthy"
+  default y
+
+endmenu

@@ -1,0 +1,13 @@
+source "Kconfig.zephyr"
+
+menu "Haiku Runner"
+
+config HR_SOURCE_MANAGER_MAX_INPUTS
+  int "Maximum registered inputs"
+  default 8
+  range 1 16
+
+rsource "Kconfig.inputs"
+rsource "Kconfig.audio"
+
+endmenu

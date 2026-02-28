@@ -1,0 +1,33 @@
+menu "Audio Output"
+
+config HR_BACKEND_STUB
+  bool "Enable stub backend"
+  default y
+
+config HR_BACKEND_I2S
+  bool "Enable I2S backend placeholder"
+  default n
+
+config HR_PIPELINE_SOF
+  bool "Use SOF pipeline adapter"
+  default n
+
+choice HR_DEFAULT_INPUT
+  prompt "Default selected input"
+  default HR_DEFAULT_INPUT_BLE
+
+config HR_DEFAULT_INPUT_BLE
+  bool "BLE"
+
+config HR_DEFAULT_INPUT_AUX
+  bool "AUX"
+
+config HR_DEFAULT_INPUT_USB_C
+  bool "USB Type-C"
+
+config HR_DEFAULT_INPUT_WIFI
+  bool "Wi-Fi"
+
+endchoice
+
+endmenu
