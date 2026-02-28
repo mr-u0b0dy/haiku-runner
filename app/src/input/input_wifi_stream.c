@@ -9,6 +9,11 @@ LOG_MODULE_REGISTER(input_wifi, LOG_LEVEL_INF);
 static audio_input_frame_callback_t g_callback;
 static bool g_connected;
 
+static int wifi_poll(void)
+{
+  return 0;
+}
+
 static int wifi_init(void)
 {
   g_connected = false;
@@ -49,6 +54,7 @@ static const struct audio_input_ops g_wifi_ops = {
   .init = wifi_init,
   .start = wifi_start,
   .stop = wifi_stop,
+  .poll = wifi_poll,
   .healthy = wifi_healthy,
   .set_frame_callback = wifi_set_callback,
 };

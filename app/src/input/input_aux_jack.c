@@ -9,6 +9,11 @@ LOG_MODULE_REGISTER(input_aux_jack, LOG_LEVEL_INF);
 static audio_input_frame_callback_t g_callback;
 static bool g_plugged;
 
+static int aux_poll(void)
+{
+  return 0;
+}
+
 static int aux_init(void)
 {
   g_plugged = false;
@@ -50,6 +55,7 @@ static const struct audio_input_ops g_aux_ops = {
   .init = aux_init,
   .start = aux_start,
   .stop = aux_stop,
+  .poll = aux_poll,
   .healthy = aux_healthy,
   .set_frame_callback = aux_set_callback,
 };

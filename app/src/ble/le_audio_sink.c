@@ -10,6 +10,11 @@ LOG_MODULE_REGISTER(le_audio_sink, LOG_LEVEL_INF);
 static audio_input_frame_callback_t g_callback;
 static bool g_link_up;
 
+static int ble_poll(void)
+{
+  return 0;
+}
+
 static int ble_init(void)
 {
   g_link_up = false;
@@ -66,6 +71,7 @@ static const struct audio_input_ops g_ble_ops = {
   .init = ble_init,
   .start = ble_start,
   .stop = ble_stop,
+  .poll = ble_poll,
   .healthy = ble_healthy,
   .set_frame_callback = ble_set_callback,
 };

@@ -12,6 +12,34 @@ config HR_INPUT_USB_C
   bool "Enable USB Type-C UAC input adapter"
   default n
 
+if HR_INPUT_USB_C
+
+config HR_INPUT_USB_C_RING_BUFFER_BYTES
+  int "USB-C PCM ring buffer size (bytes)"
+  default 8192
+  range 512 65536
+
+config HR_INPUT_USB_C_FRAME_BYTES
+  int "USB-C poll frame size (bytes)"
+  default 240
+  range 48 2048
+
+config HR_INPUT_USB_C_SAMPLE_RATE_HZ
+  int "USB-C PCM sample rate"
+  default 48000
+
+config HR_INPUT_USB_C_CHANNELS
+  int "USB-C PCM channels"
+  default 2
+  range 1 8
+
+config HR_INPUT_USB_C_BITS_PER_SAMPLE
+  int "USB-C PCM bits per sample"
+  default 16
+  range 8 32
+
+endif
+
 config HR_INPUT_WIFI
   bool "Enable Wi-Fi streaming input adapter"
   default n

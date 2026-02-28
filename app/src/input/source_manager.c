@@ -135,6 +135,13 @@ void source_manager_on_frame(enum audio_input_id id, const struct audio_frame *f
 
 void source_manager_tick(void)
 {
+  for (size_t index = 0; index < input_registry_count(); ++index) {
+    const struct audio_input_descriptor *descriptor = input_registry_at(index);
+    if (descriptor != NULL && descriptor->ops != NULL && descriptor->ops->poll != NULL) {
+      (void)descriptor->ops->poll();
+    }
+  }
+
   const struct audio_input_descriptor *active_descriptor = input_registry_get(g_active);
 
   if (g_policy.mode != SOURCE_MODE_HYBRID) {

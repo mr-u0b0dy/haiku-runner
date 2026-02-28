@@ -18,6 +18,7 @@ struct audio_input_ops {
   int (*init)(void);
   int (*start)(void);
   int (*stop)(void);
+  int (*poll)(void);
   bool (*healthy)(void);
   int (*set_frame_callback)(audio_input_frame_callback_t callback);
 };
