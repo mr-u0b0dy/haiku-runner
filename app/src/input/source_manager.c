@@ -90,6 +90,8 @@ int source_manager_start(void)
     }
   }
 
+  source_manager_tick();
+
   return 0;
 }
 
@@ -139,7 +141,7 @@ void source_manager_tick(void)
     return;
   }
 
-  if (!g_policy.allow_auto_fallback || active_descriptor == NULL || input_is_healthy(active_descriptor)) {
+  if (!g_policy.allow_auto_fallback) {
     return;
   }
 
@@ -150,6 +152,10 @@ void source_manager_tick(void)
       LOG_INF("recovered preferred source: %d", g_active);
       return;
     }
+  }
+
+  if (active_descriptor != NULL && input_is_healthy(active_descriptor)) {
+    return;
   }
 
   enum audio_input_id fallback = first_healthy_input_except(g_active);

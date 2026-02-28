@@ -1,20 +1,54 @@
+#include <errno.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/sys/util.h>
 
 #include "input_registry.h"
+#include "input_aux_jack.h"
 
 LOG_MODULE_REGISTER(input_aux_jack, LOG_LEVEL_INF);
 
 static audio_input_frame_callback_t g_callback;
+static bool g_plugged;
 
-static int aux_init(void) { return 0; }
+static int aux_init(void)
+{
+  g_plugged = false;
+  return 0;
+}
+
 static int aux_start(void) { return 0; }
 static int aux_stop(void) { return 0; }
-static bool aux_healthy(void) { return false; }
+static bool aux_healthy(void) { return g_plugged; }
 static int aux_set_callback(audio_input_frame_callback_t callback)
 {
   g_callback = callback;
-  ARG_UNUSED(g_callback);
+  return 0;
+}
+
+int input_aux_set_plugged(bool plugged)
+{
+  g_plugged = plugged;
+  return 0;
+}
+
+int input_aux_receive_frame(const uint8_t *data,
+                            size_t size,
+                            uint32_t sample_rate_hz,
+                            uint8_t channels,
+                            uint8_t bits_per_sample)
+{
+  if (!g_plugged || g_callback == NULL || data == NULL || size == 0U) {
+    return -EINVAL;
+  }
+
+  struct audio_frame frame = {
+    .data = data,
+    .size = size,
+    .sample_rate_hz = sample_rate_hz,
+    .channels = channels,
+    .bits_per_sample = bits_per_sample,
+  };
+
+  g_callback(AUDIO_INPUT_AUX, &frame);
   return 0;
 }
 
