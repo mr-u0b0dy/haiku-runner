@@ -22,7 +22,9 @@ jobs:
 
       - name: Install Zephyr Python requirements
         run: |
-          pip install -r zephyr/scripts/requirements.txt
+          ZEPHYR_PATH="$(west list -f '{abspath}' zephyr)"
+          echo "Using Zephyr at: ${ZEPHYR_PATH}"
+          pip install -r "${ZEPHYR_PATH}/scripts/requirements.txt"
 
       - name: Install ARM GNU toolchain
         run: |
