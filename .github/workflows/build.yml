@@ -22,7 +22,7 @@ jobs:
 
       - name: Install Zephyr Python requirements
         run: |
-          pip install -r modules/zephyr/scripts/requirements.txt
+          pip install -r zephyr/scripts/requirements.txt
 
       - name: Install ARM GNU toolchain
         run: |
