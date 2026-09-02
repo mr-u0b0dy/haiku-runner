@@ -33,6 +33,7 @@ flowchart LR
 - Host PC USB port ↔ nRF5340 DK debug USB port
 - AUX source 3.5 mm out → board AUX input path (when AUX scenario is enabled)
 - Optional monitor output connected only when validating audible output
+- nRF5340 DK I2S0 pins → MAX98357A amp module (when validating real audio output) — see [MAX98357A Wiring](/test-hardware/max98357a-wiring) for the exact pin table
 
 ## 2) Recommended desk placement
 

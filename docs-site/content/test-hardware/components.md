@@ -26,6 +26,7 @@ title: Components
 | Headphones / powered speaker | 1 | Audible output checks |
 | USB audio source device | 1 | Future non-mock USB-C path validation |
 | Logic analyzer or oscilloscope | 1 | Timing/signal-level debugging |
+| MAX98357A I2S amp module | 1 | Real I2S audio output path (replaces stub backend) — see [MAX98357A Wiring](/test-hardware/max98357a-wiring) |
 
 ## Software config components
 

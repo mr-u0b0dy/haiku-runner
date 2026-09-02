@@ -28,6 +28,7 @@ Zephyr-based BLE speaker scaffold for `nrf5340dk_nrf5340_cpuapp` with a multi-in
 
 See `docs-site/content/build.md` for build details.
 See `docs-site/content/test-hardware/index.md` for test bench documentation.
+See `docs-site/content/test-hardware/max98357a-wiring.md` for MAX98357A I2S amp board-to-module wiring.
 
 ## Documentation site (shadcn-docs-nuxt)
 

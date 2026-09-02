@@ -9,6 +9,7 @@ This section contains a practical test bench definition for validating `haiku-ru
 - [Layout](/test-hardware/layout): Physical bench wiring/layout for quick and repeatable tests
 - [Components](/test-hardware/components): Required hardware, optional hardware, and recommended tools
 - [Guide](/test-hardware/guide): Step-by-step setup and validation procedure
+- [MAX98357A Wiring](/test-hardware/max98357a-wiring): Board-to-module pin connections for I2S audio output
 
 ## Scope
 
