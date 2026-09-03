@@ -8,6 +8,20 @@ config HR_BACKEND_I2S
   bool "Enable I2S backend placeholder"
   default n
 
+if HR_BACKEND_I2S
+
+config HR_BACKEND_I2S_TEST_TONE
+  bool "Play a self-test melody on I2S backend start"
+  select I2S
+  default n
+  help
+    Writes a short synthesized melody ("Jingle Bells" opening verse) directly
+    to the I2S peripheral when the backend starts, independent of any input
+    source or pipeline frames. Use this to verify board-to-amp wiring (e.g.
+    MAX98357A) before relying on the full audio pipeline.
+
+endif # HR_BACKEND_I2S
+
 config HR_PIPELINE_SOF
   bool "Use SOF pipeline adapter"
   default n
