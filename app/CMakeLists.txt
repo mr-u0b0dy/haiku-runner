@@ -28,6 +28,7 @@ if(CONFIG_HR_INPUT_BLE)
   target_sources(app PRIVATE
     src/ble/le_audio_sink.c
     src/ble/le_audio_events.c
+    src/ble/le_audio_bap_sink.c
   )
 endif()
 

@@ -1,0 +1,17 @@
+# Sysbuild root for haiku-runner. Having this file present makes it the
+# sysbuild Kconfig root instead of Zephyr's default, so it must re-source
+# the default tree and layer nRF5340 net-core image controls on top.
+source "share/sysbuild/Kconfig"
+
+config NET_CORE_BOARD
+	string
+	default "nrf5340dk/nrf5340/cpunet" if "$(BOARD)" = "nrf5340dk"
+
+config NET_CORE_IMAGE_HCI_IPC
+	bool "HCI IPC image on network core"
+	default y
+	depends on NET_CORE_BOARD != ""
+	help
+	  Builds Zephyr's hci_ipc sample for the nRF5340 network core, giving
+	  the application core's Bluetooth host a controller to talk to over
+	  IPC. Required for the BLE Audio (LE Audio unicast sink) input.

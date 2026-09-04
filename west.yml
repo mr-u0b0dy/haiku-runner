@@ -8,7 +8,7 @@ manifest:
   projects:
     - name: zephyr
       remote: zephyrproject
-      revision: v4.0.0
+      revision: v4.4.2
       import:
         path-prefix: modules
 

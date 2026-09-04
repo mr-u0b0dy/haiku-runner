@@ -3,6 +3,30 @@ menu "Input Sources"
 config HR_INPUT_BLE
   bool "Enable BLE input adapter"
   default y
+  select BT
+  select BT_PERIPHERAL
+  select BT_EXT_ADV
+  select BT_AUDIO
+  select BT_BAP_UNICAST_SERVER
+  select BT_ASCS
+  select BT_PAC_SNK
+  select BT_ISO_PERIPHERAL
+  select BT_CAP_ACCEPTOR
+  select BT_VCP_VOL_REND
+  select BT_TMAP
+  select LIBLC3
+  select FPU
+  help
+    Registers the BLE input adapter, backed by a Bluetooth LE Audio (BAP)
+    unicast sink: a phone or other LE Audio source connects and streams
+    LC3-encoded audio directly to this device, like a standard BLE speaker.
+    Pulls in the Bluetooth stack and LC3 codec.
+
+    CAP Acceptor (CAS) and VCP Volume Renderer (VCS) are not optional
+    extras here: per the spec, the Unicast Media Receiver role a phone
+    looks for is BT_CAP_ACCEPTOR && ASE_SNK > 0 && BT_VCP_VOL_REND (see
+    BT_TMAP_UMR_SUPPORTED). Without them a phone connects at GATT level
+    but never offers the device as a media output.
 
 config HR_INPUT_AUX
   bool "Enable AUX jack input adapter"
