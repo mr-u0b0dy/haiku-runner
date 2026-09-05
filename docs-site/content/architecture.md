@@ -29,6 +29,19 @@ which drives the adapter's `healthy()` state (and therefore hybrid auto-fallback
 Building this requires a second firmware image for the nRF5340 network core (the Bluetooth
 controller) — see `app/Kconfig.sysbuild` / `app/sysbuild.cmake` and the [Build](/build) page.
 
+Note that LE Audio needs a capable *source*: the phone or PC must support LE Audio unicast
+(Bluetooth 5.2+ with OS support). Many Android devices and most PC Bluetooth adapters do not,
+in which case the device pairs and exposes its services correctly but no audio stream is ever
+established.
+
+## USB audio input
+
+The USB adapter implements a real USB Audio Class 2 playback device, so a host sees the board as
+a plain USB sound card — no drivers, no app, no pairing, and no LE Audio support required. The
+UAC2 class callbacks in `app/src/input/input_usb_uac2.c` hand received PCM to the same
+`input_frame_ingress` path the BLE sink uses, re-chunked to a stable frame size so the I2S
+backend is not forced to reconfigure per USB frame.
+
 ## SOF integration seam
 
 SOF is optional and can be integrated by adding a new backend or pipeline adapter without changing input adapter contracts.

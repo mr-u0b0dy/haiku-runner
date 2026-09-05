@@ -29,9 +29,21 @@ static const struct device *i2s_dev(void)
   return DEVICE_DT_GET(DT_ALIAS(i2s_tx));
 }
 
-/* Tracks whether TX is currently running, so the first write after
- * start/stop kicks the I2S peripheral off. */
+/* Tracks whether TX is currently running, so the first writes after
+ * start/stop kick the I2S peripheral off. */
 static bool g_tx_started;
+
+/* Blocks queued since the last start/stop. Starting TX on the very first
+ * block leaves no cushion: the DMA begins draining immediately and any
+ * jitter in the source starves it ("Next buffers not supplied on time").
+ * Prime a few blocks first so there is slack to absorb it. */
+#define I2S_PRIME_BLOCKS 3U
+static uint32_t g_queued_blocks;
+
+/* Consecutive failed block allocations before we treat TX as stalled and
+ * reset it. A couple of failures are normal transient backpressure. */
+#define I2S_STALL_THRESHOLD 4U
+static uint32_t g_alloc_failures;
 
 /* Format the peripheral is currently configured for; 0 means unconfigured. */
 static uint32_t g_cfg_rate_hz;
@@ -102,6 +114,7 @@ int audio_backend_write(const struct audio_frame *frame)
       (void)i2s_trigger(dev, I2S_DIR_TX, I2S_TRIGGER_DROP);
       g_tx_started = false;
     }
+    g_queued_blocks = 0U;
 
     ret = i2s_apply_config(frame->sample_rate_hz, block_bytes);
     if (ret < 0) {
@@ -113,9 +126,23 @@ int audio_backend_write(const struct audio_frame *frame)
 
   ret = k_mem_slab_alloc(&g_audio_mem_slab, &block, K_NO_WAIT);
   if (ret < 0) {
-    LOG_WRN("I2S block backpressure, dropping frame");
+    /* The driver hands blocks back to the slab as it transmits them, so a
+     * slab that stays empty means TX is no longer draining: either the
+     * source paused and the DMA underran into the driver's error state, or
+     * it was never started. Neither recovers on its own, and every later
+     * write would fail the same way, so reset the peripheral and let the
+     * next frames re-prime it. */
+    if (++g_alloc_failures >= I2S_STALL_THRESHOLD) {
+      LOG_WRN("I2S TX stalled, resetting");
+      (void)i2s_trigger(dev, I2S_DIR_TX, I2S_TRIGGER_DROP);
+      g_tx_started = false;
+      g_queued_blocks = 0U;
+      g_alloc_failures = 0U;
+    }
     return ret;
   }
+
+  g_alloc_failures = 0U;
 
   const int16_t *src = (const int16_t *)(const void *)frame->data;
   int16_t *dst = (int16_t *)block;
@@ -136,7 +163,9 @@ int audio_backend_write(const struct audio_frame *frame)
     return ret;
   }
 
-  if (!g_tx_started) {
+  g_queued_blocks++;
+
+  if (!g_tx_started && g_queued_blocks >= I2S_PRIME_BLOCKS) {
     ret = i2s_trigger(dev, I2S_DIR_TX, I2S_TRIGGER_START);
     if (ret < 0) {
       LOG_ERR("i2s_trigger start failed: %d", ret);
@@ -376,6 +405,8 @@ int audio_backend_start(void)
 int audio_backend_stop(void)
 {
   LOG_INF("audio backend stop (i2s)");
+
+  g_queued_blocks = 0U;
 
   if (!g_tx_started) {
     /* Nothing queued, and the peripheral may never have been configured. */

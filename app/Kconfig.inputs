@@ -38,6 +38,18 @@ config HR_INPUT_USB_C
 
 if HR_INPUT_USB_C
 
+config HR_INPUT_USB_C_UAC2
+  bool "Enumerate as a USB Audio Class 2 device"
+  default y
+  select USB_DEVICE_STACK_NEXT
+  select USBD_AUDIO2_CLASS
+  help
+    Implements a real USB Audio Class 2 playback device, so a host (a phone
+    in USB OTG mode, or a PC) sees the board as a USB sound card and can
+    stream to it with no drivers, no app and no pairing. Requires the
+    "zephyr,uac2" node in the board overlay and the nRF USB connector (not
+    the debug/J-Link one). Disable to use the mock feeder instead.
+
 config HR_INPUT_USB_C_RING_BUFFER_BYTES
   int "USB-C PCM ring buffer size (bytes)"
   default 8192

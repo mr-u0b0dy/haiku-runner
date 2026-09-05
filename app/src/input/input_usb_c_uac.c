@@ -14,6 +14,14 @@ RING_BUF_DECLARE(g_usb_pcm_ring, CONFIG_HR_INPUT_USB_C_RING_BUFFER_BYTES);
 
 static int usb_poll(void)
 {
+#if defined(CONFIG_HR_INPUT_USB_C_UAC2)
+  /* The UAC2 callback owns draining the ring: it delivers fixed-size chunks
+   * straight from USB context. Draining here as well would mean two
+   * consumers pulling different sized chunks from one buffer, which makes
+   * the frame geometry flip-flop and forces the I2S backend to reconfigure
+   * on nearly every write. */
+  return 0;
+#else
   if (!g_connected || g_callback == NULL) {
     return 0;
   }
@@ -32,13 +40,19 @@ static int usb_poll(void)
                                    CONFIG_HR_INPUT_USB_C_SAMPLE_RATE_HZ,
                                    CONFIG_HR_INPUT_USB_C_CHANNELS,
                                    CONFIG_HR_INPUT_USB_C_BITS_PER_SAMPLE);
+#endif
 }
 
 static int usb_init(void)
 {
   g_connected = false;
   ring_buf_reset(&g_usb_pcm_ring);
+
+#if defined(CONFIG_HR_INPUT_USB_C_UAC2)
+  return input_usb_c_uac2_init();
+#else
   return 0;
+#endif
 }
 static int usb_start(void) { return 0; }
 static int usb_stop(void)
@@ -68,12 +82,33 @@ int input_usb_c_push_pcm_bytes(const uint8_t *data, size_t size)
     return -EINVAL;
   }
 
+  /* All-or-nothing: ring_buf_put() would otherwise write only what fits,
+   * and a partial write leaves the buffer offset mid-sample, permanently
+   * shifting channel alignment for everything that follows. */
+  if (ring_buf_space_get(&g_usb_pcm_ring) < size) {
+    return -ENOSPC;
+  }
+
   uint32_t written = ring_buf_put(&g_usb_pcm_ring, data, size);
+
   if (written != size) {
     return -ENOSPC;
   }
 
   return 0;
+}
+
+int input_usb_c_take_pcm_bytes(uint8_t *data, size_t size)
+{
+  if (data == NULL || size == 0U) {
+    return -EINVAL;
+  }
+
+  if (ring_buf_size_get(&g_usb_pcm_ring) < size) {
+    return -EAGAIN;
+  }
+
+  return ring_buf_get(&g_usb_pcm_ring, data, size) == size ? 0 : -EAGAIN;
 }
 
 int input_usb_c_receive_frame(const uint8_t *data,
