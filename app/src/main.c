@@ -9,8 +9,8 @@ LOG_MODULE_REGISTER(haiku_runner, LOG_LEVEL_INF);
 
 #if defined(CONFIG_HR_DEFAULT_INPUT_AUX)
 #define HR_DEFAULT_INPUT AUDIO_INPUT_AUX
-#elif defined(CONFIG_HR_DEFAULT_INPUT_USB_C)
-#define HR_DEFAULT_INPUT AUDIO_INPUT_USB_C
+#elif defined(CONFIG_HR_DEFAULT_INPUT_USB)
+#define HR_DEFAULT_INPUT AUDIO_INPUT_USB
 #elif defined(CONFIG_HR_DEFAULT_INPUT_WIFI)
 #define HR_DEFAULT_INPUT AUDIO_INPUT_WIFI
 #else
@@ -35,8 +35,8 @@ static void register_enabled_inputs(void)
 #if defined(CONFIG_HR_INPUT_AUX)
   (void)input_adapter_aux_register();
 #endif
-#if defined(CONFIG_HR_INPUT_USB_C)
-  (void)input_adapter_usb_c_register();
+#if defined(CONFIG_HR_INPUT_USB)
+  (void)input_adapter_usb_register();
 #endif
 #if defined(CONFIG_HR_INPUT_WIFI)
   (void)input_adapter_wifi_register();

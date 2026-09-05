@@ -24,7 +24,7 @@ title: Components
 | --- | ---: | --- |
 | 3.5 mm AUX source device | 1 | Validate AUX adapter path |
 | Headphones / powered speaker | 1 | Audible output checks |
-| USB audio source device | 1 | Future non-mock USB-C path validation |
+| USB audio source device | 1 | Future non-mock USB path validation |
 | Logic analyzer or oscilloscope | 1 | Timing/signal-level debugging |
 | MAX98357A I2S amp module | 1 | Real I2S audio output path (replaces stub backend) — see [MAX98357A Wiring](/test-hardware/max98357a-wiring) |
 
@@ -33,8 +33,8 @@ title: Components
 Use these Kconfig toggles based on scenario:
 
 - `CONFIG_HR_INPUT_AUX=y`
-- `CONFIG_HR_INPUT_USB_C=y`
-- `CONFIG_HR_INPUT_USB_C_MOCK_FEEDER=y`
-- `CONFIG_HR_DEFAULT_INPUT_USB_C=y`
+- `CONFIG_HR_INPUT_USB=y`
+- `CONFIG_HR_INPUT_USB_MOCK_FEEDER=y`
+- `CONFIG_HR_DEFAULT_INPUT_USB=y`
 
 See [Guide](/test-hardware/guide) for a complete workflow.

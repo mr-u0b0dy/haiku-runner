@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-`haiku-runner` is a Zephyr RTOS application targeting the `nrf5340dk/nrf5340/cpuapp` board: a BLE speaker scaffold with a multi-input audio architecture (BLE, AUX jack, USB-C UAC, Wi-Fi streaming). It is early-stage: the BLE input (LE Audio unicast sink) and I2S output are real, but the AUX/USB-C/Wi-Fi adapters are still placeholders or stubs, not full hardware drivers. The repo is a `west` workspace root (self-managed manifest in `west.yml`, pulling in upstream Zephyr `v4.4.2`). The LE Audio (BAP/CAP/VCP/TMAP) APIs this app uses require v4.4.x — they do not exist in v4.0.0.
+`haiku-runner` is a Zephyr RTOS application targeting the `nrf5340dk/nrf5340/cpuapp` board: a BLE speaker scaffold with a multi-input audio architecture (BLE, AUX jack, USB audio, Wi-Fi streaming). It is early-stage: the BLE input (LE Audio unicast sink), the USB input (USB Audio Class 2 device) and the I2S output are real and verified on hardware, but the AUX and Wi-Fi adapters are still placeholders or stubs, not full hardware drivers (and Wi-Fi is not possible on this board at all — the nRF5340 has no Wi-Fi radio). The repo is a `west` workspace root (self-managed manifest in `west.yml`, pulling in upstream Zephyr `v4.4.2`). The LE Audio (BAP/CAP/VCP/TMAP) APIs this app uses require v4.4.x — they do not exist in v4.0.0.
 
 There are two independent parts of this repo:
 - `app/` — the Zephyr firmware application (C).
@@ -23,13 +23,14 @@ west update
 west build -b nrf5340dk/nrf5340/cpuapp app --sysbuild
 ```
 
-There is no unit test suite for the firmware in this repo. Validation is done by building and, for input adapters lacking hardware, via config-enabled mock feeders (e.g. `CONFIG_HR_INPUT_USB_C_MOCK_FEEDER=y`) — see `docs-site/content/build.md`.
+There is no unit test suite for the firmware in this repo. Validation is done by building and, for input adapters lacking hardware, via config-enabled mock feeders (e.g. `CONFIG_HR_INPUT_USB_MOCK_FEEDER=y`) — see `docs-site/content/build.md`.
 
 Useful Kconfig toggles (set via `prj.conf`, an overlay `.conf`, or `west build -- -DCONFIG_...=y`):
-- `CONFIG_HR_INPUT_AUX=y`, `CONFIG_HR_INPUT_USB_C=y`, `CONFIG_HR_INPUT_WIFI=y` — enable input adapters (BLE is on by default).
-- `CONFIG_HR_DEFAULT_INPUT_{BLE,AUX,USB_C,WIFI}` — choice of default active source at boot.
-- `CONFIG_HR_INPUT_USB_C_MOCK_FEEDER=y` — synthetic PCM feeder thread for USB-C path testing without hardware (see `Kconfig.inputs` for interval/chunk/stack tuning).
-- `CONFIG_HR_BACKEND_I2S=y` — use the I2S backend placeholder instead of the stub backend.
+- `CONFIG_HR_INPUT_AUX=y`, `CONFIG_HR_INPUT_USB=y`, `CONFIG_HR_INPUT_WIFI=y` — enable input adapters (BLE is on by default).
+- `CONFIG_HR_DEFAULT_INPUT_{BLE,AUX,USB,WIFI}` — choice of default active source at boot.
+- `CONFIG_HR_INPUT_USB_MOCK_FEEDER=y` — synthetic PCM feeder thread for USB path testing without hardware (see `Kconfig.inputs` for interval/chunk/stack tuning).
+- `CONFIG_HR_INPUT_USB_UAC2=y` — enumerate as a real USB Audio Class 2 sound card (default when `HR_INPUT_USB` is on); disable to use the mock feeder instead.
+- `CONFIG_HR_BACKEND_I2S=y` — drive real audio out over I2S instead of the stub backend. Note the default is the *stub*, so a plain build produces a silent device.
 - `CONFIG_HR_PIPELINE_SOF=y` — compile in the SOF pipeline adapter seam (not required for MVP).
 
 CI (`.github/workflows/build.yml`) does exactly: `west init -l .` → `west update` → install Zephyr's `scripts/requirements.txt` → install `gcc-arm-none-eabi` → `west build -b nrf5340dk/nrf5340/cpuapp app --sysbuild`. Mirror this sequence when validating build changes locally.
@@ -66,7 +67,7 @@ input adapter(s) --> source_manager (arbitration) --> audio_router --> audio_bac
 
 ### Kconfig structure
 
-`app/Kconfig` sources `Kconfig.inputs` (per-input enable flags + USB-C tuning + hybrid-switch fallback flag) and `Kconfig.audio` (backend selection, SOF pipeline toggle, default-input choice) under the `Haiku Runner` menu. When adding a new input or backend, extend the relevant `Kconfig.*` file rather than `app/Kconfig` directly, and wire the new source file into `app/CMakeLists.txt` behind its `CONFIG_HR_*` guard.
+`app/Kconfig` sources `Kconfig.inputs` (per-input enable flags + USB tuning + hybrid-switch fallback flag) and `Kconfig.audio` (backend selection, SOF pipeline toggle, default-input choice) under the `Haiku Runner` menu. When adding a new input or backend, extend the relevant `Kconfig.*` file rather than `app/Kconfig` directly, and wire the new source file into `app/CMakeLists.txt` behind its `CONFIG_HR_*` guard.
 
 ### Board specifics
 

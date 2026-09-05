@@ -2,7 +2,7 @@
  *
  * The board enumerates as a USB sound card; a host (phone in OTG mode, or a
  * PC) streams PCM to it with no drivers, no app and no pairing. Received
- * audio is handed to input_usb_c_receive_frame(), i.e. the same ingress path
+ * audio is handed to input_usb_receive_frame(), i.e. the same ingress path
  * every other adapter uses, so source arbitration and the I2S backend are
  * reused unchanged.
  */
@@ -14,7 +14,7 @@
 #include <zephyr/usb/usbd.h>
 #include <zephyr/usb/class/usbd_uac2.h>
 
-#include "input_usb_c_uac.h"
+#include "input_usb_uac.h"
 
 LOG_MODULE_REGISTER(input_usb_uac2, LOG_LEVEL_INF);
 
@@ -69,7 +69,7 @@ static void uac2_terminal_update_cb(const struct device *dev,
   ARG_UNUSED(user_data);
 
   LOG_INF("USB audio terminal %s", enabled ? "enabled" : "disabled");
-  (void)input_usb_c_set_connected(enabled);
+  (void)input_usb_set_connected(enabled);
 }
 
 static void *uac2_get_recv_buf(const struct device *dev,
@@ -108,7 +108,7 @@ static void uac2_data_recv_cb(const struct device *dev,
   if (size > 0U) {
     /* Buffering here rather than forwarding the raw USB frame keeps a stable
      * chunk size downstream; see HR_UAC2_CHUNK_BYTES. */
-    if (input_usb_c_push_pcm_bytes(buf, size) != 0) {
+    if (input_usb_push_pcm_bytes(buf, size) != 0) {
       /* Host is running faster than the I2S clock drains us. Dropping is the
        * right failure here: the alternative is unbounded latency growth. */
       LOG_DBG("USB PCM ring full, dropping %u bytes", size);
@@ -119,8 +119,8 @@ static void uac2_data_recv_cb(const struct device *dev,
 
   static uint8_t chunk[HR_UAC2_CHUNK_BYTES];
 
-  while (input_usb_c_take_pcm_bytes(chunk, sizeof(chunk)) == 0) {
-    (void)input_usb_c_receive_frame(chunk, sizeof(chunk), HR_UAC2_SAMPLE_RATE_HZ,
+  while (input_usb_take_pcm_bytes(chunk, sizeof(chunk)) == 0) {
+    (void)input_usb_receive_frame(chunk, sizeof(chunk), HR_UAC2_SAMPLE_RATE_HZ,
                                     HR_UAC2_CHANNELS, HR_UAC2_BITS_PER_SAMPLE);
   }
 }
@@ -176,7 +176,7 @@ static struct uac2_ops g_uac2_ops = {
   .feedback_cb = uac2_feedback_cb,
 };
 
-int input_usb_c_uac2_init(void)
+int input_usb_uac2_init(void)
 {
   int err;
 

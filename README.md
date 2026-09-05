@@ -8,7 +8,7 @@ Zephyr-based BLE speaker scaffold for `nrf5340dk_nrf5340_cpuapp` with a multi-in
 - LE Audio sink path represented as an input adapter boundary (skeleton)
 - Source manager with hybrid switching policy (manual selection + auto fallback)
 - Hardware-agnostic output backend API
-- Placeholder input adapters for AUX jack, USB Type-C audio, and Wi-Fi audio
+- Placeholder input adapters for AUX jack, USB audio, and Wi-Fi audio
 - Optional SOF adapter seam (not required in MVP)
 
 ## Repository layout

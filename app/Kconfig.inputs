@@ -32,13 +32,13 @@ config HR_INPUT_AUX
   bool "Enable AUX jack input adapter"
   default n
 
-config HR_INPUT_USB_C
-  bool "Enable USB Type-C UAC input adapter"
+config HR_INPUT_USB
+  bool "Enable USB Audio Class input adapter"
   default n
 
-if HR_INPUT_USB_C
+if HR_INPUT_USB
 
-config HR_INPUT_USB_C_UAC2
+config HR_INPUT_USB_UAC2
   bool "Enumerate as a USB Audio Class 2 device"
   default y
   select USB_DEVICE_STACK_NEXT
@@ -50,47 +50,47 @@ config HR_INPUT_USB_C_UAC2
     "zephyr,uac2" node in the board overlay and the nRF USB connector (not
     the debug/J-Link one). Disable to use the mock feeder instead.
 
-config HR_INPUT_USB_C_RING_BUFFER_BYTES
-  int "USB-C PCM ring buffer size (bytes)"
+config HR_INPUT_USB_RING_BUFFER_BYTES
+  int "USB PCM ring buffer size (bytes)"
   default 8192
   range 512 65536
 
-config HR_INPUT_USB_C_FRAME_BYTES
-  int "USB-C poll frame size (bytes)"
+config HR_INPUT_USB_FRAME_BYTES
+  int "USB poll frame size (bytes)"
   default 240
   range 48 2048
 
-config HR_INPUT_USB_C_SAMPLE_RATE_HZ
-  int "USB-C PCM sample rate"
+config HR_INPUT_USB_SAMPLE_RATE_HZ
+  int "USB PCM sample rate"
   default 48000
 
-config HR_INPUT_USB_C_CHANNELS
-  int "USB-C PCM channels"
+config HR_INPUT_USB_CHANNELS
+  int "USB PCM channels"
   default 2
   range 1 8
 
-config HR_INPUT_USB_C_BITS_PER_SAMPLE
-  int "USB-C PCM bits per sample"
+config HR_INPUT_USB_BITS_PER_SAMPLE
+  int "USB PCM bits per sample"
   default 16
   range 8 32
 
-config HR_INPUT_USB_C_MOCK_FEEDER
-  bool "Enable mock USB-C PCM feeder thread"
+config HR_INPUT_USB_MOCK_FEEDER
+  bool "Enable mock USB PCM feeder thread"
   default n
 
-if HR_INPUT_USB_C_MOCK_FEEDER
+if HR_INPUT_USB_MOCK_FEEDER
 
-config HR_INPUT_USB_C_MOCK_INTERVAL_MS
+config HR_INPUT_USB_MOCK_INTERVAL_MS
   int "Mock feeder interval (ms)"
   default 10
   range 1 1000
 
-config HR_INPUT_USB_C_MOCK_CHUNK_BYTES
+config HR_INPUT_USB_MOCK_CHUNK_BYTES
   int "Mock feeder bytes per interval"
   default 240
   range 48 2048
 
-config HR_INPUT_USB_C_MOCK_STACK_SIZE
+config HR_INPUT_USB_MOCK_STACK_SIZE
   int "Mock feeder thread stack size"
   default 1024
   range 512 4096

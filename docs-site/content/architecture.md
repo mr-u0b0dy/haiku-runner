@@ -12,7 +12,7 @@ title: Architecture
 ## Multi-input model
 
 - BLE is treated as one adapter, not the central pipeline owner.
-- Future adapters (AUX, USB-C, Wi-Fi) implement the same `audio_input_ops` API.
+- Other adapters (USB audio, and the AUX / Wi-Fi stubs) implement the same `audio_input_ops` API.
 - Switching policy defaults to manual selection with auto fallback on unhealthy source.
 
 ## BLE Audio input

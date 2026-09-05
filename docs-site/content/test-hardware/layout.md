@@ -47,7 +47,7 @@ flowchart LR
 ### Variant A: Hardware-minimal (fast iteration)
 
 - USB only (power + flash + logs)
-- Enable USB-C mock feeder config for synthetic audio frames
+- Enable USB mock feeder config for synthetic audio frames
 - No external audio peripherals required
 
 ### Variant B: AUX validation
@@ -58,7 +58,7 @@ flowchart LR
 
 ### Variant C: Mixed switching behavior
 
-- Keep mock USB-C feeder enabled
+- Keep mock USB feeder enabled
 - Attach AUX source
 - Exercise source policy fallback and manual override behavior
 
