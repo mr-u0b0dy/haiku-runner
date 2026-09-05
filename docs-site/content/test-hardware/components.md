@@ -38,3 +38,7 @@ Use these Kconfig toggles based on scenario:
 - `CONFIG_HR_DEFAULT_INPUT_USB=y`
 
 See [Guide](/test-hardware/guide) for a complete workflow.
+
+## AUX analog front-end
+
+The 3.5 mm line input needs a small bias/anti-alias circuit before the SAADC pin — a 1 µF coupling capacitor, a 10 kΩ/10 kΩ divider to VDD/2, and an RC low-pass. Full circuit, values and rationale in [AUX Jack Wiring](/test-hardware/aux-jack-wiring).

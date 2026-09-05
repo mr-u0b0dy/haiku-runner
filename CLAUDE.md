@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-`haiku-runner` is a Zephyr RTOS application targeting the `nrf5340dk/nrf5340/cpuapp` board: a BLE speaker scaffold with a multi-input audio architecture (BLE, AUX jack, USB audio, Wi-Fi streaming). It is early-stage: the BLE input (LE Audio unicast sink), the USB input (USB Audio Class 2 device) and the I2S output are real and verified on hardware, but the AUX and Wi-Fi adapters are still placeholders or stubs, not full hardware drivers (and Wi-Fi is not possible on this board at all — the nRF5340 has no Wi-Fi radio). The repo is a `west` workspace root (self-managed manifest in `west.yml`, pulling in upstream Zephyr `v4.4.2`). The LE Audio (BAP/CAP/VCP/TMAP) APIs this app uses require v4.4.x — they do not exist in v4.0.0.
+`haiku-runner` is a Zephyr RTOS application targeting the `nrf5340dk/nrf5340/cpuapp` board: a BLE speaker scaffold with a multi-input audio architecture (BLE, AUX jack, USB audio, Wi-Fi streaming). It is early-stage: the BLE input (LE Audio unicast sink), the USB input (USB Audio Class 2 device) and the I2S output are real and verified on hardware. The AUX input samples a real analog signal via SAADC but needs an external front-end and has known clock-mismatch limitations (see `docs-site/content/test-hardware/aux-jack-wiring.md`). Wi-Fi remains a stub and is not possible on this board at all — the nRF5340 has no Wi-Fi radio. The repo is a `west` workspace root (self-managed manifest in `west.yml`, pulling in upstream Zephyr `v4.4.2`). The LE Audio (BAP/CAP/VCP/TMAP) APIs this app uses require v4.4.x — they do not exist in v4.0.0.
 
 There are two independent parts of this repo:
 - `app/` — the Zephyr firmware application (C).
@@ -26,7 +26,7 @@ west build -b nrf5340dk/nrf5340/cpuapp app --sysbuild
 There is no unit test suite for the firmware in this repo. Validation is done by building and, for input adapters lacking hardware, via config-enabled mock feeders (e.g. `CONFIG_HR_INPUT_USB_MOCK_FEEDER=y`) — see `docs-site/content/build.md`.
 
 Useful Kconfig toggles (set via `prj.conf`, an overlay `.conf`, or `west build -- -DCONFIG_...=y`):
-- `CONFIG_HR_INPUT_AUX=y`, `CONFIG_HR_INPUT_USB=y`, `CONFIG_HR_INPUT_WIFI=y` — enable input adapters (BLE is on by default).
+- `CONFIG_HR_INPUT_AUX=y`, `CONFIG_HR_INPUT_USB=y`, `CONFIG_HR_INPUT_WIFI=y` — enable input adapters (BLE is on by default). AUX drives the SAADC and is mono-only: Zephyr's nRF SAADC driver only uses the hardware sampling timer with a single active channel.
 - `CONFIG_HR_DEFAULT_INPUT_{BLE,AUX,USB,WIFI}` — choice of default active source at boot.
 - `CONFIG_HR_INPUT_USB_MOCK_FEEDER=y` — synthetic PCM feeder thread for USB path testing without hardware (see `Kconfig.inputs` for interval/chunk/stack tuning).
 - `CONFIG_HR_INPUT_USB_UAC2=y` — enumerate as a real USB Audio Class 2 sound card (default when `HR_INPUT_USB` is on); disable to use the mock feeder instead.

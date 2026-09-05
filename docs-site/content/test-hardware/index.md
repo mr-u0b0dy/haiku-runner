@@ -10,6 +10,7 @@ This section contains a practical test bench definition for validating `haiku-ru
 - [Components](/test-hardware/components): Required hardware, optional hardware, and recommended tools
 - [Guide](/test-hardware/guide): Step-by-step setup and validation procedure
 - [MAX98357A Wiring](/test-hardware/max98357a-wiring): Board-to-module pin connections for I2S audio output
+- [AUX Jack Wiring](/test-hardware/aux-jack-wiring): Analog front-end required for the 3.5 mm line input
 
 ## Scope
 

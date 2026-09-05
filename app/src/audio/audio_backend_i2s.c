@@ -134,7 +134,9 @@ int audio_backend_write(const struct audio_frame *frame)
      * next frames re-prime it. */
     if (++g_alloc_failures >= I2S_STALL_THRESHOLD) {
       LOG_WRN("I2S TX stalled, resetting");
-      (void)i2s_trigger(dev, I2S_DIR_TX, I2S_TRIGGER_DROP);
+      if (i2s_trigger(dev, I2S_DIR_TX, I2S_TRIGGER_PREPARE) < 0) {
+        (void)i2s_trigger(dev, I2S_DIR_TX, I2S_TRIGGER_DROP);
+      }
       g_tx_started = false;
       g_queued_blocks = 0U;
       g_alloc_failures = 0U;
@@ -159,7 +161,22 @@ int audio_backend_write(const struct audio_frame *frame)
 
   ret = i2s_write(dev, block, block_bytes);
   if (ret < 0) {
-    LOG_ERR("i2s_write failed: %d", ret);
+    /* The driver only takes ownership of the block on success, so this one is
+     * ours to release - returning without freeing leaks it out of the slab,
+     * and a handful of failures permanently starves every later write. */
+    k_mem_slab_free(&g_audio_mem_slab, block);
+
+    /* A write typically fails because an underrun put the peripheral in
+     * I2S_STATE_ERROR, and PREPARE is the only transition out of it. It is
+     * rejected in any other state, which is harmless here. */
+    if (i2s_trigger(dev, I2S_DIR_TX, I2S_TRIGGER_PREPARE) < 0) {
+      (void)i2s_trigger(dev, I2S_DIR_TX, I2S_TRIGGER_DROP);
+    }
+
+    g_tx_started = false;
+    g_queued_blocks = 0U;
+
+    LOG_WRN("i2s_write failed (%d), TX reset", ret);
     return ret;
   }
 
