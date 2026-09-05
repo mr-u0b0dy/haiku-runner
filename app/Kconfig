@@ -9,5 +9,6 @@ config HR_SOURCE_MANAGER_MAX_INPUTS
 
 rsource "Kconfig.inputs"
 rsource "Kconfig.audio"
+rsource "Kconfig.ui"
 
 endmenu

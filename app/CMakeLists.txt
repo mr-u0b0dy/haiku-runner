@@ -46,6 +46,14 @@ if(CONFIG_HR_INPUT_USB)
   endif()
 endif()
 
+if(CONFIG_HR_UI_SOURCE_CONTROL)
+  target_sources(app PRIVATE src/ui/source_control.c)
+endif()
+
+if(CONFIG_HR_UI_AUDIO_CUE)
+  target_sources(app PRIVATE src/audio/audio_cue.c)
+endif()
+
 if(CONFIG_HR_INPUT_WIFI)
   target_sources(app PRIVATE src/input/input_wifi_stream.c)
 endif()

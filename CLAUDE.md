@@ -32,6 +32,7 @@ Useful Kconfig toggles (set via `prj.conf`, an overlay `.conf`, or `west build -
 - `CONFIG_HR_INPUT_USB_UAC2=y` — enumerate as a real USB Audio Class 2 sound card (default when `HR_INPUT_USB` is on); disable to use the mock feeder instead.
 - `CONFIG_HR_BACKEND_I2S=y` — drive real audio out over I2S instead of the stub backend. Note the default is the *stub*, so a plain build produces a silent device.
 - `CONFIG_HR_PIPELINE_SOF=y` — compile in the SOF pipeline adapter seam (not required for MVP).
+- `CONFIG_HR_UI_SOURCE_CONTROL=y` (default) — board button cycles the active input, one LED per source, and `CONFIG_HR_UI_AUDIO_CUE=y` announces the change with a beep pattern. Needs `sw0` and `led0..led3` aliases.
 
 CI (`.github/workflows/build.yml`) does exactly: `west init -l .` → `west update` → install Zephyr's `scripts/requirements.txt` → install `gcc-arm-none-eabi` → `west build -b nrf5340dk/nrf5340/cpuapp app --sysbuild`. Mirror this sequence when validating build changes locally.
 
@@ -58,7 +59,9 @@ input adapter(s) --> source_manager (arbitration) --> audio_router --> audio_bac
 4. **`audio_router`** (`audio_router.c`/`.h`) forwards accepted frames (`struct audio_frame`, see `audio_frame.h`) from the active source to the backend.
 5. **`audio_backend`** (`audio_backend.h`) is the hardware-agnostic output API (`init`/`start`/`stop`/`write`). Only one backend implementation is compiled in, chosen in `app/CMakeLists.txt` by `CONFIG_HR_BACKEND_I2S` (else falls back to `audio_backend_stub.c`).
 6. **`input_frame_ingress`** (`input_frame_ingress.c`/`.h`) is a shared helper adapters use to validate/deliver a raw PCM chunk into an `audio_input_frame_callback_t`, checking `source_ready` and building `audio_frame` metadata (sample rate, channels, bits per sample) consistently.
-7. **SOF integration** is an optional seam, not a hard dependency: `CONFIG_HR_PIPELINE_SOF` conditionally compiles `audio_pipeline_sof_adapter.c` (`app/include/audio_pipeline.h` is the pipeline-level API it would plug into) without touching `audio_input_ops` or `source_manager` contracts.
+7. **`source_control`** (`app/src/ui/source_control.c`) cycles the active input on a board button press (`sw0`), lights one LED per source, and asks `audio_cue` to announce the change. It runs on its own thread because the announcement sleeps for the length of the cue — doing that on the system workqueue would stall Bluetooth and USB work items. This is the only caller of `source_manager_select()`.
+8. **`audio_cue`** (`app/src/audio/audio_cue.c`) synthesises the announcement beeps and writes them straight to `audio_backend`, deliberately bypassing `source_manager` so the cue is heard whichever input is active. `audio_router_submit()` drops input frames while `audio_cue_active()`.
+9. **SOF integration** is an optional seam, not a hard dependency: `CONFIG_HR_PIPELINE_SOF` conditionally compiles `audio_pipeline_sof_adapter.c` (`app/include/audio_pipeline.h` is the pipeline-level API it would plug into) without touching `audio_input_ops` or `source_manager` contracts.
 
 ### Porting guidance (from `docs-site/content/hardware-porting.md`)
 
@@ -67,14 +70,22 @@ input adapter(s) --> source_manager (arbitration) --> audio_router --> audio_bac
 
 ### Kconfig structure
 
-`app/Kconfig` sources `Kconfig.inputs` (per-input enable flags + USB tuning + hybrid-switch fallback flag) and `Kconfig.audio` (backend selection, SOF pipeline toggle, default-input choice) under the `Haiku Runner` menu. When adding a new input or backend, extend the relevant `Kconfig.*` file rather than `app/Kconfig` directly, and wire the new source file into `app/CMakeLists.txt` behind its `CONFIG_HR_*` guard.
+`app/Kconfig` sources `Kconfig.inputs` (per-input enable flags + USB/AUX tuning + hybrid-switch fallback flag), `Kconfig.audio` (backend selection, SOF pipeline toggle, default-input choice) and `Kconfig.ui` (source button, LEDs, audible cue) under the `Haiku Runner` menu. When adding a new input or backend, extend the relevant `Kconfig.*` file rather than `app/Kconfig` directly, and wire the new source file into `app/CMakeLists.txt` behind its `CONFIG_HR_*` guard.
 
 ### Board specifics
 
-- Board config: `app/boards/nrf5340dk_nrf5340_cpuapp.conf` / `.overlay` (currently minimal — console on `uart0`).
+- Board config: `app/boards/nrf5340dk_nrf5340_cpuapp.conf` / `.overlay` — console on `uart0`, I2S0 pinmux for the MAX98357A, the `zephyr,uac2` USB audio function, SAADC channels for the AUX jack, and `hfclkaudio` at 12.288 MHz (the 48 kHz clock family; the achievable I2S rates follow from it).
 - `app/Kconfig.sysbuild` + `app/sysbuild.cmake` build the nRF5340 network-core Bluetooth controller image (Zephyr's `samples/bluetooth/hci_ipc`, peripheral-only ISO config) alongside the app-core image whenever `CONFIG_HR_INPUT_BLE` is enabled — required for the BLE Audio (LE Audio unicast sink) input to have a controller to talk to. `west build --sysbuild` produces both images.
 - `app/sysbuild.conf` is intentionally minimal, reserved for future nRF53 multi-image controls.
 
 ## Documentation
 
-Architecture/build/porting docs already exist under `docs-site/content/` (`architecture.md`, `build.md`, `input-model.md`, `sof-integration.md`, `hardware-porting.md`, `test-hardware/`). When making architectural changes, prefer updating those alongside code rather than duplicating explanations elsewhere.
+Docs live under `docs-site/content/`. When making changes, update these alongside the code rather than duplicating explanations elsewhere:
+
+- `status.md` — verification matrix: what is confirmed on hardware vs built-but-unproven vs stub. **Keep this honest** — it is the page that stops someone trusting an untested path.
+- `known-issues.md` — defects, hardware limits, shortcomings, with measurements where they exist.
+- `roadmap.md` — pending and future work.
+- `architecture.md`, `input-model.md`, `build.md`, `hardware-porting.md`, `sof-integration.md` — reference.
+- `test-hardware/` — bench setup, plus `max98357a-wiring.md` (I2S amp) and `aux-jack-wiring.md` (analog front-end).
+
+When a subsystem's verification state changes (e.g. something is finally tested on hardware), update `status.md` in the same commit.

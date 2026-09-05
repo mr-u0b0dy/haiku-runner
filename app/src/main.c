@@ -5,6 +5,10 @@
 #include "input_adapters.h"
 #include "source_manager.h"
 
+#if defined(CONFIG_HR_UI_SOURCE_CONTROL)
+#include "source_control.h"
+#endif
+
 LOG_MODULE_REGISTER(haiku_runner, LOG_LEVEL_INF);
 
 #if defined(CONFIG_HR_DEFAULT_INPUT_AUX)
@@ -64,8 +68,22 @@ int main(void)
     return -1;
   }
 
+#if defined(CONFIG_HR_UI_SOURCE_CONTROL)
+  /* After the adapters are registered, so the button cycles what this build
+   * actually contains. */
+  if (source_control_init() != 0) {
+    LOG_WRN("source control unavailable");
+  }
+#endif
+
   while (true) {
     source_manager_tick();
+
+#if defined(CONFIG_HR_UI_SOURCE_CONTROL)
+    /* Keeps the LEDs following automatic fallback too, not just presses. */
+    source_control_refresh();
+#endif
+
     k_sleep(K_MSEC(200));
   }
 }
