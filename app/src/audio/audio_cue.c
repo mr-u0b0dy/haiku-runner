@@ -121,8 +121,12 @@ static void cue_pattern_for(enum audio_input_id id, uint8_t *beeps, uint32_t *fr
     *beeps = 3U;
     *freq_hz = 659U; /* E5 */
     break;
-  default:
+  case AUDIO_INPUT_WIFI:
     *beeps = 4U;
+    *freq_hz = 523U; /* C5 */
+    break;
+  default:
+    *beeps = 5U;
     *freq_hz = 440U; /* A4 - unknown/no source */
     break;
   }

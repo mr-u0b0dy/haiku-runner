@@ -50,8 +50,12 @@ BUILD_ASSERT(ARRAY_SIZE(g_aux_channels) == AUX_CHANNELS,
 
 /* Zephyr's nRF SAADC driver only arms the SAADC's own sampling timer when a
  * single channel is active; with more it paces samples from a kernel timer,
- * which cannot reach audio intervals and makes adc_read() fail. */
-BUILD_ASSERT(AUX_CHANNELS == 1 || AUX_INTERVAL_US > 128,
+ * which cannot reach audio intervals and makes adc_read() fail. The interval
+ * that would let a kernel timer keep up (> 128 us) is outside
+ * CONFIG_HR_INPUT_AUX_SAMPLE_INTERVAL_US's range (1-128), so there is no
+ * interval that makes stereo viable here - this assert is unconditional on
+ * channel count. */
+BUILD_ASSERT(AUX_CHANNELS == 1,
              "Stereo AUX capture cannot use the SAADC hardware timer - "
              "set CONFIG_HR_INPUT_AUX_CHANNELS=1");
 

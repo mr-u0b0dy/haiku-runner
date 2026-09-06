@@ -38,16 +38,20 @@ LOG_MODULE_REGISTER(le_audio_bap_sink, LOG_LEVEL_INF);
 /* Worst case PCM per LC3 frame: 10 ms at 48 kHz. */
 #define HR_BAP_MAX_SAMPLES 480U
 
-/* The frequencies LC3 actually supports. Deliberately not
+/* The frequencies LC3 actually supports, minus 44.1 kHz: the I2S backend's
+ * output clock is the 12.288 MHz audio clock, which only divides down to the
+ * 48 kHz family (48/32/24/16/12/8 kHz - see the overlay comment next to
+ * hfclkaudio-frequency), so a negotiated 44.1 kHz stream cannot be played
+ * and would only fail i2s_configure() per-frame. Also deliberately not
  * BT_AUDIO_CODEC_CAP_FREQ_ANY, which also claims 88.2-384 kHz that liblc3
  * cannot decode. A sink advertising only 48 kHz is too narrow for a central
  * to find a usable configuration (BAP makes 16 kHz mandatory for a Sink), so
- * publish the full LC3 range and adapt the output to whatever is negotiated. */
+ * publish every 48 kHz-family rate LC3 supports and adapt the output to
+ * whatever is negotiated. */
 #define HR_BAP_FREQ_SUPPORTED (BT_AUDIO_CODEC_CAP_FREQ_8KHZ |  \
 			       BT_AUDIO_CODEC_CAP_FREQ_16KHZ | \
 			       BT_AUDIO_CODEC_CAP_FREQ_24KHZ | \
 			       BT_AUDIO_CODEC_CAP_FREQ_32KHZ | \
-			       BT_AUDIO_CODEC_CAP_FREQ_44KHZ | \
 			       BT_AUDIO_CODEC_CAP_FREQ_48KHZ)
 
 #define AVAILABLE_SINK_CONTEXT (BT_AUDIO_CONTEXT_TYPE_UNSPECIFIED |    \

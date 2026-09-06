@@ -49,6 +49,13 @@ static uint32_t g_alloc_failures;
 static uint32_t g_cfg_rate_hz;
 static size_t g_cfg_block_bytes;
 
+/* Serializes audio_backend_write() against itself: the audio cue (UI thread)
+ * and an input adapter's delivery thread (BT RX, USB, AUX sampling) can both
+ * reach this function, and audio_router's cue-active flag only discourages
+ * the overlap, it does not rule it out - a frame can pass that check and
+ * then race the cue for this function's unprotected state below. */
+K_MUTEX_DEFINE(g_write_lock);
+
 static int i2s_apply_config(uint32_t rate_hz, size_t block_bytes)
 {
   const struct device *dev = i2s_dev();
@@ -107,6 +114,8 @@ int audio_backend_write(const struct audio_frame *frame)
   const struct device *dev = i2s_dev();
   int ret;
 
+  k_mutex_lock(&g_write_lock, K_FOREVER);
+
   /* Re-configure on the fly if the stream's rate or frame size changed
    * (a new ASE can negotiate anything from 8 kHz/7.5 ms upwards). */
   if (frame->sample_rate_hz != g_cfg_rate_hz || block_bytes != g_cfg_block_bytes) {
@@ -118,6 +127,7 @@ int audio_backend_write(const struct audio_frame *frame)
 
     ret = i2s_apply_config(frame->sample_rate_hz, block_bytes);
     if (ret < 0) {
+      k_mutex_unlock(&g_write_lock);
       return ret;
     }
   }
@@ -141,6 +151,7 @@ int audio_backend_write(const struct audio_frame *frame)
       g_queued_blocks = 0U;
       g_alloc_failures = 0U;
     }
+    k_mutex_unlock(&g_write_lock);
     return ret;
   }
 
@@ -177,6 +188,7 @@ int audio_backend_write(const struct audio_frame *frame)
     g_queued_blocks = 0U;
 
     LOG_WRN("i2s_write failed (%d), TX reset", ret);
+    k_mutex_unlock(&g_write_lock);
     return ret;
   }
 
@@ -186,11 +198,13 @@ int audio_backend_write(const struct audio_frame *frame)
     ret = i2s_trigger(dev, I2S_DIR_TX, I2S_TRIGGER_START);
     if (ret < 0) {
       LOG_ERR("i2s_trigger start failed: %d", ret);
+      k_mutex_unlock(&g_write_lock);
       return ret;
     }
     g_tx_started = true;
   }
 
+  k_mutex_unlock(&g_write_lock);
   return 0;
 }
 

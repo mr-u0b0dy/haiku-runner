@@ -24,8 +24,10 @@ LOG_MODULE_REGISTER(source_control, LOG_LEVEL_INF);
 static const struct gpio_dt_spec g_button = GPIO_DT_SPEC_GET(SW0_NODE, gpios);
 static struct gpio_callback g_button_cb;
 
-/* One LED per input, indexed by enum audio_input_id. The DK has four LEDs and
- * there are four ids including UNKNOWN, so the mapping is direct. */
+/* One LED per real source (BLE/AUX/USB/WIFI), indexed by enum
+ * audio_input_id. AUDIO_INPUT_UNKNOWN has no slot here - set_leds() turns
+ * every LED off for it instead - which is what the BUILD_ASSERT below
+ * enforces: ARRAY_SIZE(g_leds) == AUDIO_INPUT_UNKNOWN. */
 static const struct gpio_dt_spec g_leds[] = {
   GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios), /* AUDIO_INPUT_BLE */
   GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios), /* AUDIO_INPUT_AUX */
@@ -73,7 +75,11 @@ static enum audio_input_id source_control_next(enum audio_input_id from)
     return AUDIO_INPUT_UNKNOWN;
   }
 
-  size_t start = 0U;
+  /* Default to count - 1 (not 0) when `from` isn't registered - e.g.
+   * AUDIO_INPUT_UNKNOWN after every source went unhealthy - so the
+   * (start + 1) % count search below starts at index 0 instead of skipping
+   * it. */
+  size_t start = count - 1U;
 
   for (size_t i = 0; i < count; ++i) {
     const struct audio_input_descriptor *d = input_registry_at(i);

@@ -78,10 +78,14 @@ config HR_INPUT_AUX_CHANNELS
 config HR_INPUT_AUX_FRAME_SAMPLES
   int "Samples per channel per delivered frame"
   default 480
-  range 32 960
+  range 32 480
   help
     480 samples at ~48 kHz is a 10 ms frame, matching the block geometry the
-    I2S backend uses for the BLE and USB paths.
+    I2S backend uses for the BLE and USB paths. The upper bound is not just
+    that alignment: the I2S backend's block size is fixed at 480 samples
+    (AUDIO_BLOCK_SAMPLES in audio_backend_i2s.c), and it rejects with
+    -ENOTSUP any frame bigger than that, so a value above 480 here would
+    compile fine and then silently drop every AUX frame at runtime.
 
 config HR_INPUT_AUX_ADC_RESOLUTION
   int "SAADC resolution (bits)"

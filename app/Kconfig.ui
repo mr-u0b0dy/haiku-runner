@@ -21,8 +21,8 @@ config HR_UI_AUDIO_CUE
   default y
   help
     Plays a short pattern identifying the new source: 1 beep for BLE, 2 for
-    USB, 3 for AUX, 4 for none. Pitch differs per source as well, so a cue is
-    recognisable without counting.
+    USB, 3 for AUX, 4 for Wi-Fi, 5 for none. Pitch differs per source as well,
+    so a cue is recognisable without counting.
 
     The cue is written straight to the output backend rather than through
     source_manager, so it is heard whichever input is active. Input frames are
