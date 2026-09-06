@@ -1,0 +1,16 @@
+/* Only applied when the checked-out Zephyr's devicetree actually defines
+ * the hfclkaudio node label (see the detection in ../sysbuild.cmake).
+ *
+ * That node - and the clock_control_nrf_hfclkaudio driver that reads it -
+ * arrived in Zephyr shortly after v4.4.2, which this project pins for CI.
+ * A pinned v4.4.2 checkout has no such label, and referencing it there is a
+ * devicetree parse error, not just a no-op - so it cannot live in the main
+ * overlay unconditionally. But on a newer Zephyr the split clock_control_nrf
+ * drivers select CLOCK_CONTROL_NRF_HFCLKAUDIO, which reads this node's
+ * hfclkaudio-frequency property instead of the legacy &clock property the
+ * main overlay sets, so without this fragment I2S's ACLK clock source
+ * BUILD_ASSERT fails there.
+ */
+&hfclkaudio {
+  hfclkaudio-frequency = <12288000>;
+};

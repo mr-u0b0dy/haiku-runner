@@ -41,3 +41,30 @@ if(SB_CONFIG_NET_CORE_IMAGE_HCI_IPC)
     CACHE INTERNAL ""
   )
 endif()
+
+# The hfclkaudio devicetree node (and the clock_control_nrf_hfclkaudio driver
+# that reads it) arrived in Zephyr shortly after v4.4.2, which this project
+# pins for CI. A pinned v4.4.2 checkout has no such label - referencing it
+# unconditionally in the app overlay is a devicetree parse error there - but
+# a newer Zephyr's split clock_control_nrf drivers select
+# CLOCK_CONTROL_NRF_HFCLKAUDIO, which needs that node's hfclkaudio-frequency
+# property instead of the legacy one on &clock the main overlay sets, and
+# I2S's ACLK clock source BUILD_ASSERT fails there without it. Detect which
+# devicetree this checkout actually has and layer on the extra overlay only
+# when the node exists, so both a CI workspace pinned exactly to v4.4.2 and a
+# local checkout that floats ahead of that pin (e.g. one shared with other
+# projects) build correctly.
+set(HR_NRF5340_PERIPHERALS_DTSI
+  ${ZEPHYR_BASE}/dts/arm/nordic/nrf5340_cpuapp_peripherals.dtsi)
+
+if(EXISTS ${HR_NRF5340_PERIPHERALS_DTSI})
+  file(STRINGS ${HR_NRF5340_PERIPHERALS_DTSI} HR_HFCLKAUDIO_NODE_MATCH
+    REGEX "^[ \t]*hfclkaudio:[ \t]*hfclkaudio[ \t]*\\{")
+
+  if(HR_HFCLKAUDIO_NODE_MATCH)
+    set(app_EXTRA_DTC_OVERLAY_FILE
+      ${CMAKE_CURRENT_LIST_DIR}/boards/nrf5340dk_nrf5340_cpuapp-hfclkaudio.overlay
+      CACHE INTERNAL ""
+    )
+  endif()
+endif()
