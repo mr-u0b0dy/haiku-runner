@@ -1,0 +1,28 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "nRF5340 app core (J-Link)",
+      "type": "cortex-debug",
+      "request": "attach",
+      "servertype": "jlink",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/build/app/zephyr/zephyr.elf",
+      "device": "NRF5340_XXAA_APP",
+      "interface": "swd",
+      "runToEntryPoint": "main",
+      "svdFile": "${workspaceFolder}/app/boards/nrf5340dk_nrf5340_cpuapp.svd"
+    },
+    {
+      "name": "nRF5340 app core (OpenOCD)",
+      "type": "cortex-debug",
+      "request": "launch",
+      "servertype": "openocd",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/build/app/zephyr/zephyr.elf",
+      "configFiles": ["interface/jlink.cfg", "target/nrf5340.cfg"],
+      "runToEntryPoint": "main",
+      "svdFile": "${workspaceFolder}/app/boards/nrf5340dk_nrf5340_cpuapp.svd"
+    }
+  ]
+}

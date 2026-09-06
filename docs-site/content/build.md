@@ -27,6 +27,23 @@ unicast sink, which needs a second image built for the nRF5340 network core (the
 wired up by `app/Kconfig.sysbuild` and `app/sysbuild.cmake`. Flash both images produced by the
 build (`west flash` after a sysbuild picks these up automatically).
 
+## Debugging
+
+`.vscode/launch.json` has `cortex-debug` launch configs for the nRF5340 app core (J-Link and
+OpenOCD variants), both pointing at `build/app/zephyr/zephyr.elf` — the sysbuild default domain
+for this repo — and at the vendored SVD `app/boards/nrf5340dk_nrf5340_cpuapp.svd` (Nordic's
+official nRF5340 application-core SVD) for peripheral register info. Build first, then either:
+
+- **VS Code**: install the [cortex-debug](https://github.com/Marus/cortex-debug) extension, open
+  the repo folder, and use the Run and Debug panel.
+- **Neovim**: install [nvim-dap](https://github.com/mfussenegger/nvim-dap) and
+  [nvim-dap-cortex-debug](https://github.com/jedrzejboczar/nvim-dap-cortex-debug), which reads the
+  same `launch.json` automatically. cortex-debug's backend itself still needs installing once
+  (e.g. `:MasonInstall cortex-debug` if using mason.nvim).
+
+The net-core `hci_ipc` image isn't covered by these configs — it's an unmodified upstream Zephyr
+sample, not app code.
+
 ## Common config toggles
 
 - Enable AUX adapter: `CONFIG_HR_INPUT_AUX=y`
