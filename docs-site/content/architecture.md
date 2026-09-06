@@ -4,14 +4,19 @@ title: Architecture
 
 `haiku-runner` is organized around a source-agnostic audio pipeline. BLE is deliberately *not* privileged: it is one input adapter among several, and the arbitration and output layers know nothing about it.
 
-```
-  BLE (LE Audio sink) ─┐
-  USB (UAC2 device)  ──┼─► source_manager ─► audio_router ─► audio_backend ─► I2S ─► amp
-  AUX (SAADC)        ──┤     (arbitration)      (forward)      (stub | i2s)
-  Wi-Fi (stub)       ──┘            ▲                ▲
-                                    │                │
-                          source_control        audio_cue
-                         (button + LEDs)   (announcement beeps)
+```mermaid
+flowchart LR
+    BLE["BLE\n(LE Audio sink)"] --> SM
+    USB["USB\n(UAC2 device)"] --> SM
+    AUX["AUX\n(SAADC)"] --> SM
+    WIFI["Wi-Fi\n(stub)"] --> SM
+    SM["source_manager\n(arbitration)"] --> AR["audio_router\n(forward)"]
+    AR --> AB["audio_backend\n(stub | i2s)"]
+    AB --> I2S["I2S"] --> AMP["amp"]
+    SC["source_control\n(button + LEDs)"] -- select --> SM
+    SC -- announce --> AC["audio_cue"]
+    AC -- drops frames while active --> AR
+    AC -. writes beeps directly .-> AB
 ```
 
 1. **Input adapters** produce `audio_frame` packets and hand them to `input_frame_ingress`.

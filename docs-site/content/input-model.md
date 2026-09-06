@@ -40,6 +40,18 @@ Health is how arbitration decides, so each adapter defines it meaningfully rathe
 3. Otherwise, if the current source is still healthy, stay.
 4. Otherwise, fall back to the first healthy source.
 
+```mermaid
+flowchart TD
+    Tick["source_manager_tick()\nevery 200 ms"] --> Poll["Poll every registered adapter"]
+    Poll --> Preferred{"Preferred source\nhealthy?"}
+    Preferred -- yes --> MakeActive["Make preferred source active"]
+    Preferred -- no --> Current{"Current active\nsource still healthy?"}
+    Current -- yes --> Stay["Stay on current source"]
+    Current -- no --> Fallback{"Any other\nhealthy source?"}
+    Fallback -- yes --> SwitchTo["Fall back to it"]
+    Fallback -- no --> None["No active source\n(AUDIO_INPUT_UNKNOWN)"]
+```
+
 Steps 2–4 apply only in `SOURCE_MODE_HYBRID` with `CONFIG_HR_SWITCH_ALLOW_AUTO_FALLBACK=y`. Frames from any non-active source are dropped in `source_manager_on_frame()`.
 
 The practical effect: plug in USB and it takes over; unplug it and the device falls back to whatever else has signal.

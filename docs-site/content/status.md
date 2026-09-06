@@ -30,16 +30,18 @@ What actually works, what is built but unproven, and what is still a stub. "Veri
 
 ## Build configurations
 
-All of these are known to build:
+CI builds all seven of these on every push (`.github/workflows/build.yml`), so a break in any one
+of them fails the build instead of hiding behind the default's stub backend. See
+[Build](/build#ready-made-build-variants) for the `app/configs/*.conf` fragment behind each row.
 
-| Configuration | Flags |
+| Configuration | Fragment |
 | --- | --- |
 | Default (silent) | *none* — stub backend, BLE only |
-| BLE speaker | `HR_BACKEND_I2S=y` |
-| USB speaker | `HR_BACKEND_I2S=y HR_INPUT_USB=y HR_DEFAULT_INPUT_USB=y` |
-| AUX speaker | `HR_BACKEND_I2S=y HR_INPUT_AUX=y HR_DEFAULT_INPUT_AUX=y` |
-| All inputs | `HR_BACKEND_I2S=y HR_INPUT_USB=y HR_INPUT_AUX=y` |
-| USB without hardware | `HR_INPUT_USB=y HR_INPUT_USB_UAC2=n HR_INPUT_USB_MOCK_FEEDER=y` |
-| Amp bring-up | `HR_BACKEND_I2S=y HR_BACKEND_I2S_TEST_TONE=y` |
+| BLE speaker | `configs/i2s-ble.conf` |
+| USB speaker | `configs/i2s-usb.conf` |
+| AUX speaker | `configs/i2s-aux.conf` |
+| All inputs (arbitration exercise) | `configs/aux-usb-ble.conf` |
+| USB without hardware | `configs/usb-mock-feeder.conf` |
+| Amp bring-up | `configs/i2s-test-tone.conf` |
 
 Note the default build uses the **stub** backend, so a plain `west build` with no flags produces a device that runs but makes no sound. This is deliberate — the stub keeps the pipeline testable without hardware — but it surprises people.

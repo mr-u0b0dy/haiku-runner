@@ -16,7 +16,7 @@ This section contains a practical test bench definition for validating `haiku-ru
 
 The test bench is focused on:
 
-- `nrf5340dk_nrf5340_cpuapp`
-- Audio input path validation (AUX / USB mock / Wi-Fi placeholder)
+- `nrf5340dk/nrf5340/cpuapp`
+- Audio input path validation (AUX / USB mock / Wi-Fi stub)
 - Audio routing and source selection behavior
 - Hardware-assisted and hardware-minimal workflows

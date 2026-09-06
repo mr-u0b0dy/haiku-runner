@@ -13,21 +13,6 @@ flowchart LR
     AUX[AUX Source\noptional] --> DK
 ```
 
-```text
-+-----------------------+      USB      +----------------------+
-| Host PC (Linux/macOS) | <-----------> | nRF5340 DK (target)  |
-| - west build/flash    |               | - Zephyr app         |
-| - UART terminal       |               | - logging / routing  |
-+-----------------------+               +----------+-----------+
-                                                    |
-                                                    | Audio out (future backend)
-                                                    v
-                                           +----------------------+
-                                           | Speaker / Analyzer   |
-                                           | (optional in MVP)    |
-                                           +----------------------+
-```
-
 ## 1.1) Connection map
 
 - Host PC USB port ↔ nRF5340 DK debug USB port
