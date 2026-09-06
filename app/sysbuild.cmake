@@ -15,7 +15,7 @@ if(SB_CONFIG_NET_CORE_IMAGE_HCI_IPC)
   # Audio unicast sink only ever accepts a connection and receives CIS
   # audio; it never scans, centrals, or broadcasts).
   set(${NET_APP}_EXTRA_CONF_FILE
-    ${NET_APP_SRC_DIR}/extra-iso_peripheral-bt_ll_sw_split.conf
+    ${NET_APP_SRC_DIR}/nrf5340_cpunet_iso_peripheral-bt_ll_sw_split.conf
     CACHE INTERNAL ""
   )
 endif()

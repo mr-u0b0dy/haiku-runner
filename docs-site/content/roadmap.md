@@ -20,10 +20,6 @@ Until this is done, the largest subsystem in the project is unproven.
 
 The [wiring guide](/test-hardware/aux-jack-wiring) has the circuit. Until it exists, AUX cannot be judged, and enabling it without the circuit actively degrades behaviour.
 
-### Make CI build the real configurations
-
-CI compiles only the default (stub backend, no optional inputs), so none of the I2S, USB, or AUX code is covered. Move the seven-variant matrix into the workflow.
-
 ## Near term — correctness
 
 ### USB clock-drift feedback regulator

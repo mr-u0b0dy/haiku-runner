@@ -7,6 +7,24 @@ on:
 jobs:
   zephyr-build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variant:
+          - name: default
+            extra_conf: ""
+          - name: i2s-ble
+            extra_conf: configs/i2s-ble.conf
+          - name: i2s-usb
+            extra_conf: configs/i2s-usb.conf
+          - name: i2s-aux
+            extra_conf: configs/i2s-aux.conf
+          - name: aux-usb-ble
+            extra_conf: configs/aux-usb-ble.conf
+          - name: usb-mock-feeder
+            extra_conf: configs/usb-mock-feeder.conf
+          - name: i2s-test-tone
+            extra_conf: configs/i2s-test-tone.conf
     steps:
       - uses: actions/checkout@v4
 
@@ -31,9 +49,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-arm-none-eabi
 
-      - name: Build nRF53 app
+      - name: Build nRF53 app (${{ matrix.variant.name }})
         env:
           ZEPHYR_TOOLCHAIN_VARIANT: gnuarmemb
           GNUARMEMB_TOOLCHAIN_PATH: /usr
         run: |
-          west build -b nrf5340dk/nrf5340/cpuapp app --sysbuild
+          if [ -n "${{ matrix.variant.extra_conf }}" ]; then
+            west build -b nrf5340dk/nrf5340/cpuapp app --sysbuild -- -Dapp_EXTRA_CONF_FILE=${{ matrix.variant.extra_conf }}
+          else
+            west build -b nrf5340dk/nrf5340/cpuapp app --sysbuild
+          fi

@@ -78,10 +78,6 @@ No unit tests, no integration tests, no CI beyond a compile check. Every functio
 
 The pipeline is unusually testable — `audio_input_ops`, `audio_backend`, and `input_frame_ingress` are all narrow, mockable interfaces — so this is a missed opportunity rather than a hard problem.
 
-### CI does not build the interesting configurations
-
-CI runs a single default `west build`, which uses the **stub** backend and no optional inputs. None of the I2S, USB, or AUX code is compiled in CI, so a break in any of them passes. The seven-variant matrix used during development should be what CI runs.
-
 ### The serial console is the only observability
 
 There is no shell, no runtime introspection, no counters exposed. Diagnosing anything means reading logs — and the J-Link VCOM drops bytes under load, so log messages are frequently truncated or lost, which made several bugs harder to pin down than they should have been.
