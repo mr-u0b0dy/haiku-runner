@@ -3,6 +3,7 @@
 
 #include "input_frame_ingress.h"
 #include "input_registry.h"
+#include "le_audio_bap_sink.h"
 #include "le_audio_sink.h"
 
 LOG_MODULE_REGISTER(le_audio_sink, LOG_LEVEL_INF);
@@ -12,26 +13,26 @@ static bool g_link_up;
 
 static int ble_poll(void)
 {
+  le_audio_bap_sink_poll();
   return 0;
 }
 
 static int ble_init(void)
 {
   g_link_up = false;
-  return 0;
+  return le_audio_bap_sink_init();
 }
 
 static int ble_start(void)
 {
-  g_link_up = true;
-  LOG_INF("BLE sink started");
-  return 0;
+  LOG_INF("BLE sink started, advertising");
+  return le_audio_bap_sink_start_adv();
 }
 
 static int ble_stop(void)
 {
   g_link_up = false;
-  return 0;
+  return le_audio_bap_sink_stop_adv();
 }
 
 static bool ble_healthy(void)

@@ -1,3 +1,7 @@
+#include <zephyr/dt-bindings/adc/adc.h>
+#include <zephyr/dt-bindings/adc/nrf-saadc.h>
+#include <zephyr/dt-bindings/usb/audio.h>
+
 / {
   chosen {
     zephyr,console = &uart0;
@@ -5,6 +9,55 @@
 
   aliases {
     i2s-tx = &i2s0;
+  };
+
+  /* AUX jack capture channels, in order: left, right.
+   * A0 = P0.04 = AIN0, A1 = P0.05 = AIN1 on the nRF5340 DK analog header.
+   * Both expect a biased, filtered line-level signal - see
+   * docs-site/content/test-hardware/aux-jack-wiring.md. */
+  zephyr,user {
+    io-channels = <&adc 0>, <&adc 1>;
+  };
+
+  /* USB Audio Class 2 playback device: the board enumerates as a USB sound
+   * card, so any host (phone in OTG mode, PC) can stream to it with no
+   * drivers and no pairing. Speaker only - no capture terminal, since this
+   * device has no microphone. Modeled on Zephyr's
+   * samples/subsys/usb/uac2_explicit_feedback. */
+  uac2_speaker: usb_audio2 {
+    compatible = "zephyr,uac2";
+    status = "okay";
+    full-speed;
+    audio-function = <AUDIO_FUNCTION_OTHER>;
+
+    uac_aclk: aclk {
+      compatible = "zephyr,uac2-clock-source";
+      clock-type = "internal-programmable";
+      frequency-control = "host-programmable";
+      sampling-frequencies = <48000>;
+    };
+
+    usb_stream_in: out_terminal {
+      compatible = "zephyr,uac2-input-terminal";
+      clock-source = <&uac_aclk>;
+      terminal-type = <USB_TERMINAL_STREAMING>;
+      front-left;
+      front-right;
+    };
+
+    speaker_output: speaker {
+      compatible = "zephyr,uac2-output-terminal";
+      data-source = <&usb_stream_in>;
+      clock-source = <&uac_aclk>;
+      terminal-type = <OUTPUT_TERMINAL_SPEAKER>;
+    };
+
+    as_iso_out: out_interface {
+      compatible = "zephyr,uac2-audio-streaming";
+      linked-terminal = <&usb_stream_in>;
+      subslot-size = <2>;
+      bit-resolution = <16>;
+    };
   };
 };
 
@@ -20,8 +73,12 @@
   };
 };
 
-&hfclkaudio {
-  hfclkaudio-frequency = <11289600>;
+/* 12.288 MHz is the 48 kHz clock family (12288000 / 256 = 48000 exactly).
+ * The previous 11.2896 MHz is the 44.1 kHz family and cannot divide down to
+ * an exact 48 kHz frame clock, which is the rate both the USB Audio device
+ * and the BLE Audio (LC3) path run at. */
+&clock {
+  hfclkaudio-frequency = <12288000>;
 };
 
 &i2s0 {
@@ -29,4 +86,34 @@
   pinctrl-0 = <&i2s0_default_alt>;
   pinctrl-names = "default";
   clock-source = "ACLK";
+};
+
+/* Gain 1/4 with the VDD/4 reference gives a full-scale input span of 0..VDD
+ * (3.3 V), so a signal biased to VDD/2 sits mid-scale and can swing either
+ * way. Acquisition time is kept short (3 us) because two channels must be
+ * scanned within one sampling interval (21 us by default); that requires the
+ * front-end to present a low source impedance, which the buffered divider in
+ * the wiring guide does. */
+&adc {
+  #address-cells = <1>;
+  #size-cells = <0>;
+  status = "okay";
+
+  channel@0 {
+    reg = <0>;
+    zephyr,gain = "ADC_GAIN_1_4";
+    zephyr,reference = "ADC_REF_VDD_1_4";
+    zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 3)>;
+    zephyr,input-positive = <NRF_SAADC_AIN0>;
+    zephyr,resolution = <12>;
+  };
+
+  channel@1 {
+    reg = <1>;
+    zephyr,gain = "ADC_GAIN_1_4";
+    zephyr,reference = "ADC_REF_VDD_1_4";
+    zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 3)>;
+    zephyr,input-positive = <NRF_SAADC_AIN1>;
+    zephyr,resolution = <12>;
+  };
 };

@@ -5,14 +5,19 @@ config HR_BACKEND_STUB
   default y
 
 config HR_BACKEND_I2S
-  bool "Enable I2S backend placeholder"
+  bool "Enable I2S output backend"
+  select I2S
   default n
+  help
+    Drives audio frames from the pipeline out over I2S (e.g. to a MAX98357A).
+    Selects the I2S driver, which the backend needs unconditionally: both
+    audio_backend_init() and audio_backend_write() talk to the peripheral,
+    not just the optional self-test melody below.
 
 if HR_BACKEND_I2S
 
 config HR_BACKEND_I2S_TEST_TONE
   bool "Play a self-test melody on I2S backend start"
-  select I2S
   default n
   help
     Writes a short synthesized melody ("Jingle Bells" opening verse) directly
@@ -36,8 +41,8 @@ config HR_DEFAULT_INPUT_BLE
 config HR_DEFAULT_INPUT_AUX
   bool "AUX"
 
-config HR_DEFAULT_INPUT_USB_C
-  bool "USB Type-C"
+config HR_DEFAULT_INPUT_USB
+  bool "USB"
 
 config HR_DEFAULT_INPUT_WIFI
   bool "Wi-Fi"

@@ -19,35 +19,33 @@ west update
 
 ### Mode A: Hardware-minimal (recommended first pass)
 
-Use USB-C mock feeder to exercise routing without external audio hardware.
-
-Add these options in your overlay config (or temporary config):
-
-- `CONFIG_HR_INPUT_USB_C=y`
-- `CONFIG_HR_DEFAULT_INPUT_USB_C=y`
-- `CONFIG_HR_INPUT_USB_C_MOCK_FEEDER=y`
+Use USB mock feeder to exercise routing without external audio hardware:
+`configs/usb-mock-feeder.conf` (`CONFIG_HR_INPUT_USB=y`, `CONFIG_HR_DEFAULT_INPUT_USB=y`,
+`CONFIG_HR_INPUT_USB_MOCK_FEEDER=y`).
 
 Optional tuning:
 
-- `CONFIG_HR_INPUT_USB_C_MOCK_INTERVAL_MS=10`
-- `CONFIG_HR_INPUT_USB_C_MOCK_CHUNK_BYTES=240`
+- `CONFIG_HR_INPUT_USB_MOCK_INTERVAL_MS=10`
+- `CONFIG_HR_INPUT_USB_MOCK_CHUNK_BYTES=240`
 
 ### Mode B: AUX path validation
 
-Enable AUX path and connect AUX source:
-
-- `CONFIG_HR_INPUT_AUX=y`
+Enable AUX path and connect AUX source: `configs/i2s-aux.conf` (`CONFIG_HR_INPUT_AUX=y`, plus the
+I2S backend so you can actually hear it).
 
 ### Mode C: Switching behavior checks
 
-Enable both AUX and mock USB-C to test policy fallback and source changes.
+`configs/aux-usb-ble.conf` enables AUX, USB and BLE together (stub backend) to test policy
+fallback and source changes without needing real audio output.
 
 ## 3) Build and flash
 
 ```bash
-west build -b nrf5340dk_nrf5340_cpuapp app --sysbuild
+west build -b nrf5340dk/nrf5340/cpuapp app --sysbuild -- -Dapp_EXTRA_CONF_FILE=configs/<mode>.conf
 west flash
 ```
+
+See [Build](/build#ready-made-build-variants) for the full list of fragments.
 
 ## 4) Observe runtime behavior
 
@@ -75,4 +73,4 @@ Check logs for:
 
 - Build fails: re-run `west update` and confirm Zephyr SDK/toolchain setup
 - No logs: verify USB data cable and serial port selection
-- No frame activity in mock mode: confirm `CONFIG_HR_INPUT_USB_C_MOCK_FEEDER=y`
+- No frame activity in mock mode: confirm `CONFIG_HR_INPUT_USB_MOCK_FEEDER=y`

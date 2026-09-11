@@ -1,6 +1,7 @@
 #include <errno.h>
 
 #include <zephyr/device.h>
+#include <zephyr/drivers/i2s.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
@@ -8,22 +9,17 @@
 
 LOG_MODULE_REGISTER(audio_backend_i2s, LOG_LEVEL_INF);
 
-int audio_backend_write(const struct audio_frame *frame)
-{
-  ARG_UNUSED(frame);
-  return 0;
-}
-
-#if defined(CONFIG_HR_BACKEND_I2S_TEST_TONE)
-
-#include <zephyr/drivers/i2s.h>
-
 #define HR_I2S_SAMPLE_RATE_HZ 48000U
 #define HR_I2S_CHANNELS       2U
 #define HR_I2S_WORD_SIZE_BITS 16U
 
-#define AUDIO_BLOCK_SAMPLES 960U /* 20 ms per block at 48 kHz */
-#define AUDIO_BLOCK_COUNT   4U
+/* Slab blocks are sized for the worst case a BLE Audio (LC3) frame can
+ * produce: 10 ms at 48 kHz, stereo, 16-bit. The rate and frame duration are
+ * negotiated per stream, so the I2S peripheral is configured lazily to match
+ * whatever actually arrives (see i2s_apply_config), and the block size used
+ * per write can be smaller than the slab block. */
+#define AUDIO_BLOCK_SAMPLES 480U
+#define AUDIO_BLOCK_COUNT   6U
 #define AUDIO_BLOCK_SIZE (AUDIO_BLOCK_SAMPLES * HR_I2S_CHANNELS * sizeof(int16_t))
 
 K_MEM_SLAB_DEFINE(g_audio_mem_slab, AUDIO_BLOCK_SIZE, AUDIO_BLOCK_COUNT, 4);
@@ -32,6 +28,187 @@ static const struct device *i2s_dev(void)
 {
   return DEVICE_DT_GET(DT_ALIAS(i2s_tx));
 }
+
+/* Tracks whether TX is currently running, so the first writes after
+ * start/stop kick the I2S peripheral off. */
+static bool g_tx_started;
+
+/* Blocks queued since the last start/stop. Starting TX on the very first
+ * block leaves no cushion: the DMA begins draining immediately and any
+ * jitter in the source starves it ("Next buffers not supplied on time").
+ * Prime a few blocks first so there is slack to absorb it. */
+#define I2S_PRIME_BLOCKS 3U
+static uint32_t g_queued_blocks;
+
+/* Consecutive failed block allocations before we treat TX as stalled and
+ * reset it. A couple of failures are normal transient backpressure. */
+#define I2S_STALL_THRESHOLD 4U
+static uint32_t g_alloc_failures;
+
+/* Format the peripheral is currently configured for; 0 means unconfigured. */
+static uint32_t g_cfg_rate_hz;
+static size_t g_cfg_block_bytes;
+
+/* Serializes audio_backend_write() against itself: the audio cue (UI thread)
+ * and an input adapter's delivery thread (BT RX, USB, AUX sampling) can both
+ * reach this function, and audio_router's cue-active flag only discourages
+ * the overlap, it does not rule it out - a frame can pass that check and
+ * then race the cue for this function's unprotected state below. */
+K_MUTEX_DEFINE(g_write_lock);
+
+static int i2s_apply_config(uint32_t rate_hz, size_t block_bytes)
+{
+  const struct device *dev = i2s_dev();
+
+  struct i2s_config cfg = {
+    .word_size = HR_I2S_WORD_SIZE_BITS,
+    .channels = HR_I2S_CHANNELS,
+    .format = I2S_FMT_DATA_FORMAT_I2S,
+    .options = I2S_OPT_FRAME_CLK_CONTROLLER | I2S_OPT_BIT_CLK_CONTROLLER,
+    .frame_clk_freq = rate_hz,
+    .mem_slab = &g_audio_mem_slab,
+    .block_size = block_bytes,
+    .timeout = 2000,
+  };
+
+  int ret = i2s_configure(dev, I2S_DIR_TX, &cfg);
+
+  if (ret < 0) {
+    LOG_ERR("I2S configure failed (%u Hz, %zu bytes): %d", rate_hz, block_bytes, ret);
+    g_cfg_rate_hz = 0U;
+    return ret;
+  }
+
+  g_cfg_rate_hz = rate_hz;
+  g_cfg_block_bytes = block_bytes;
+  LOG_INF("I2S configured: %u Hz, %zu bytes/block", rate_hz, block_bytes);
+  return 0;
+}
+
+int audio_backend_write(const struct audio_frame *frame)
+{
+  if (frame == NULL || frame->data == NULL || frame->size == 0U) {
+    return -EINVAL;
+  }
+
+  if (frame->bits_per_sample != 16U || frame->sample_rate_hz == 0U) {
+    LOG_WRN("unsupported frame format (%u-bit, %u Hz)", frame->bits_per_sample,
+           frame->sample_rate_hz);
+    return -ENOTSUP;
+  }
+
+  if (frame->channels != 1U && frame->channels != 2U) {
+    LOG_WRN("unsupported channel count: %u", frame->channels);
+    return -ENOTSUP;
+  }
+
+  const size_t in_samples = frame->size / (frame->channels * sizeof(int16_t));
+  const size_t block_bytes = in_samples * HR_I2S_CHANNELS * sizeof(int16_t);
+
+  if (in_samples == 0U || block_bytes > AUDIO_BLOCK_SIZE) {
+    LOG_WRN("frame of %zu samples exceeds the %u-sample I2S block", in_samples,
+           AUDIO_BLOCK_SAMPLES);
+    return -ENOTSUP;
+  }
+
+  const struct device *dev = i2s_dev();
+  int ret;
+
+  k_mutex_lock(&g_write_lock, K_FOREVER);
+
+  /* Re-configure on the fly if the stream's rate or frame size changed
+   * (a new ASE can negotiate anything from 8 kHz/7.5 ms upwards). */
+  if (frame->sample_rate_hz != g_cfg_rate_hz || block_bytes != g_cfg_block_bytes) {
+    if (g_tx_started) {
+      (void)i2s_trigger(dev, I2S_DIR_TX, I2S_TRIGGER_DROP);
+      g_tx_started = false;
+    }
+    g_queued_blocks = 0U;
+
+    ret = i2s_apply_config(frame->sample_rate_hz, block_bytes);
+    if (ret < 0) {
+      k_mutex_unlock(&g_write_lock);
+      return ret;
+    }
+  }
+
+  void *block;
+
+  ret = k_mem_slab_alloc(&g_audio_mem_slab, &block, K_NO_WAIT);
+  if (ret < 0) {
+    /* The driver hands blocks back to the slab as it transmits them, so a
+     * slab that stays empty means TX is no longer draining: either the
+     * source paused and the DMA underran into the driver's error state, or
+     * it was never started. Neither recovers on its own, and every later
+     * write would fail the same way, so reset the peripheral and let the
+     * next frames re-prime it. */
+    if (++g_alloc_failures >= I2S_STALL_THRESHOLD) {
+      LOG_WRN("I2S TX stalled, resetting");
+      if (i2s_trigger(dev, I2S_DIR_TX, I2S_TRIGGER_PREPARE) < 0) {
+        (void)i2s_trigger(dev, I2S_DIR_TX, I2S_TRIGGER_DROP);
+      }
+      g_tx_started = false;
+      g_queued_blocks = 0U;
+      g_alloc_failures = 0U;
+    }
+    k_mutex_unlock(&g_write_lock);
+    return ret;
+  }
+
+  g_alloc_failures = 0U;
+
+  const int16_t *src = (const int16_t *)(const void *)frame->data;
+  int16_t *dst = (int16_t *)block;
+
+  for (size_t i = 0; i < in_samples; ++i) {
+    if (frame->channels == 1U) {
+      dst[2 * i] = src[i];
+      dst[2 * i + 1] = src[i];
+    } else {
+      dst[2 * i] = src[2 * i];
+      dst[2 * i + 1] = src[2 * i + 1];
+    }
+  }
+
+  ret = i2s_write(dev, block, block_bytes);
+  if (ret < 0) {
+    /* The driver only takes ownership of the block on success, so this one is
+     * ours to release - returning without freeing leaks it out of the slab,
+     * and a handful of failures permanently starves every later write. */
+    k_mem_slab_free(&g_audio_mem_slab, block);
+
+    /* A write typically fails because an underrun put the peripheral in
+     * I2S_STATE_ERROR, and PREPARE is the only transition out of it. It is
+     * rejected in any other state, which is harmless here. */
+    if (i2s_trigger(dev, I2S_DIR_TX, I2S_TRIGGER_PREPARE) < 0) {
+      (void)i2s_trigger(dev, I2S_DIR_TX, I2S_TRIGGER_DROP);
+    }
+
+    g_tx_started = false;
+    g_queued_blocks = 0U;
+
+    LOG_WRN("i2s_write failed (%d), TX reset", ret);
+    k_mutex_unlock(&g_write_lock);
+    return ret;
+  }
+
+  g_queued_blocks++;
+
+  if (!g_tx_started && g_queued_blocks >= I2S_PRIME_BLOCKS) {
+    ret = i2s_trigger(dev, I2S_DIR_TX, I2S_TRIGGER_START);
+    if (ret < 0) {
+      LOG_ERR("i2s_trigger start failed: %d", ret);
+      k_mutex_unlock(&g_write_lock);
+      return ret;
+    }
+    g_tx_started = true;
+  }
+
+  k_mutex_unlock(&g_write_lock);
+  return 0;
+}
+
+#if defined(CONFIG_HR_BACKEND_I2S_TEST_TONE)
 
 /* One full sine cycle, Q15-ish amplitude, sampled by a 32-bit DDS phase
  * accumulator so any note frequency can be synthesized without floats. */
@@ -182,6 +359,12 @@ static void play_melody(const struct device *dev)
 {
   LOG_INF("playing I2S self-test melody (Jingle Bells, %u notes)", (unsigned int)MELODY_LEN);
 
+  /* The melody is synthesized at a fixed 48 kHz using full-size blocks; the
+   * peripheral is otherwise configured lazily by audio_backend_write(). */
+  if (i2s_apply_config(HR_I2S_SAMPLE_RATE_HZ, AUDIO_BLOCK_SIZE) < 0) {
+    return;
+  }
+
   melody_reset();
 
   bool tx_started = false;
@@ -221,6 +404,8 @@ static void play_melody(const struct device *dev)
   LOG_INF("I2S self-test melody finished");
 }
 
+#endif /* CONFIG_HR_BACKEND_I2S_TEST_TONE */
+
 int audio_backend_init(void)
 {
   const struct device *dev = i2s_dev();
@@ -230,59 +415,35 @@ int audio_backend_init(void)
     return -ENODEV;
   }
 
-  struct i2s_config cfg = {
-    .word_size = HR_I2S_WORD_SIZE_BITS,
-    .channels = HR_I2S_CHANNELS,
-    .format = I2S_FMT_DATA_FORMAT_I2S,
-    .options = I2S_OPT_FRAME_CLK_CONTROLLER | I2S_OPT_BIT_CLK_CONTROLLER,
-    .frame_clk_freq = HR_I2S_SAMPLE_RATE_HZ,
-    .mem_slab = &g_audio_mem_slab,
-    .block_size = AUDIO_BLOCK_SIZE,
-    .timeout = 2000,
-  };
-
-  int ret = i2s_configure(dev, I2S_DIR_TX, &cfg);
-
-  if (ret < 0) {
-    LOG_ERR("I2S configure failed: %d", ret);
-    return ret;
-  }
-
-  LOG_INF("audio backend init (i2s, self-test melody enabled)");
+  /* Deliberately no i2s_configure() here: the sample rate and block size
+   * depend on what the active stream negotiates, so configuration happens on
+   * the first write (or when play_melody runs). */
+  LOG_INF("audio backend init (i2s)");
   return 0;
 }
 
 int audio_backend_start(void)
 {
   LOG_INF("audio backend start (i2s)");
+
+#if defined(CONFIG_HR_BACKEND_I2S_TEST_TONE)
   play_melody(i2s_dev());
+#endif
+
   return 0;
 }
 
 int audio_backend_stop(void)
 {
   LOG_INF("audio backend stop (i2s)");
+
+  g_queued_blocks = 0U;
+
+  if (!g_tx_started) {
+    /* Nothing queued, and the peripheral may never have been configured. */
+    return 0;
+  }
+
+  g_tx_started = false;
   return i2s_trigger(i2s_dev(), I2S_DIR_TX, I2S_TRIGGER_DROP);
 }
-
-#else /* !CONFIG_HR_BACKEND_I2S_TEST_TONE */
-
-int audio_backend_init(void)
-{
-  LOG_INF("audio backend init (i2s placeholder)");
-  return 0;
-}
-
-int audio_backend_start(void)
-{
-  LOG_INF("audio backend start (i2s placeholder)");
-  return 0;
-}
-
-int audio_backend_stop(void)
-{
-  LOG_INF("audio backend stop (i2s placeholder)");
-  return 0;
-}
-
-#endif /* CONFIG_HR_BACKEND_I2S_TEST_TONE */

@@ -8,6 +8,7 @@ target_sources(app PRIVATE
   src/main.c
   src/audio/audio_router.c
   src/audio/audio_pipeline_zephyr.c
+  src/audio/volume_control.c
   src/input/input_frame_ingress.c
   src/input/input_registry.c
   src/input/source_manager.c
@@ -28,6 +29,7 @@ if(CONFIG_HR_INPUT_BLE)
   target_sources(app PRIVATE
     src/ble/le_audio_sink.c
     src/ble/le_audio_events.c
+    src/ble/le_audio_bap_sink.c
   )
 endif()
 
@@ -35,11 +37,22 @@ if(CONFIG_HR_INPUT_AUX)
   target_sources(app PRIVATE src/input/input_aux_jack.c)
 endif()
 
-if(CONFIG_HR_INPUT_USB_C)
-  target_sources(app PRIVATE src/input/input_usb_c_uac.c)
-  if(CONFIG_HR_INPUT_USB_C_MOCK_FEEDER)
-    target_sources(app PRIVATE src/input/input_usb_c_mock_feeder.c)
+if(CONFIG_HR_INPUT_USB)
+  target_sources(app PRIVATE src/input/input_usb_uac.c)
+  if(CONFIG_HR_INPUT_USB_UAC2)
+    target_sources(app PRIVATE src/input/input_usb_uac2.c)
   endif()
+  if(CONFIG_HR_INPUT_USB_MOCK_FEEDER)
+    target_sources(app PRIVATE src/input/input_usb_mock_feeder.c)
+  endif()
+endif()
+
+if(CONFIG_HR_UI_SOURCE_CONTROL)
+  target_sources(app PRIVATE src/ui/source_control.c)
+endif()
+
+if(CONFIG_HR_UI_AUDIO_CUE)
+  target_sources(app PRIVATE src/audio/audio_cue.c)
 endif()
 
 if(CONFIG_HR_INPUT_WIFI)

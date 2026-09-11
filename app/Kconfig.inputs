@@ -3,58 +3,178 @@ menu "Input Sources"
 config HR_INPUT_BLE
   bool "Enable BLE input adapter"
   default y
+  select BT
+  select BT_PERIPHERAL
+  select BT_EXT_ADV
+  select BT_AUDIO
+  select BT_BAP_UNICAST_SERVER
+  select BT_ASCS
+  select BT_PAC_SNK
+  select BT_ISO_PERIPHERAL
+  select BT_CAP_ACCEPTOR
+  select BT_VCP_VOL_REND
+  select BT_TMAP
+  select LIBLC3
+  select FPU
+  help
+    Registers the BLE input adapter, backed by a Bluetooth LE Audio (BAP)
+    unicast sink: a phone or other LE Audio source connects and streams
+    LC3-encoded audio directly to this device, like a standard BLE speaker.
+    Pulls in the Bluetooth stack and LC3 codec.
+
+    CAP Acceptor (CAS) and VCP Volume Renderer (VCS) are not optional
+    extras here: per the spec, the Unicast Media Receiver role a phone
+    looks for is BT_CAP_ACCEPTOR && ASE_SNK > 0 && BT_VCP_VOL_REND (see
+    BT_TMAP_UMR_SUPPORTED). Without them a phone connects at GATT level
+    but never offers the device as a media output.
 
 config HR_INPUT_AUX
   bool "Enable AUX jack input adapter"
+  select ADC
+  select ADC_ASYNC
+  default n
+  help
+    Samples a line-level analog signal from a 3.5 mm jack with the SAADC and
+    feeds it into the audio pipeline. Requires an external bias/anti-alias
+    front-end (audio is AC-coupled and bipolar; the SAADC needs a positive
+    voltage centred in its range) - see the wiring guide in
+    docs-site/content/test-hardware/aux-jack-wiring.md.
+
+if HR_INPUT_AUX
+
+config HR_INPUT_AUX_SAMPLE_INTERVAL_US
+  int "AUX sampling interval (microseconds)"
+  default 21
+  range 1 128
+  help
+    Sample rate is 1000000 / interval, so this cannot express every rate.
+    21 us gives 47619 Hz, the closest achievable to 48 kHz.
+
+    The I2S output clock is derived from the 12.288 MHz audio clock and can
+    only produce 48000/32000/24000/16000/12000/8000 Hz. Of those, only 8000 Hz
+    (interval 125) is also exactly representable here, so at any other setting
+    the capture and playback clocks differ slightly: 47619 Hz in against
+    48000 Hz out is a 0.8% pitch error plus slow buffer drift. Set 125 for a
+    drift-free (but 4 kHz bandwidth) path, or add a resampler to fix it
+    properly.
+
+    Must stay <= 128 to use the SAADC hardware timer; above that the driver
+    falls back to a kernel timer, whose jitter is not acceptable for audio.
+
+config HR_INPUT_AUX_CHANNELS
+  int "AUX channels (1 = mono/left, 2 = stereo)"
+  default 1
+  range 1 2
+  help
+    Keep this at 1. Zephyr's nRF SAADC driver only uses the hardware sampling
+    timer when exactly one channel is active (see the active_channel_cnt == 1
+    condition in adc_nrfx_saadc.c); with two channels it falls back to pacing
+    samples from a kernel timer, which cannot run at audio intervals and makes
+    adc_read() fail outright.
+
+    Mono costs nothing here in practice: the MAX98357A output stage is mono,
+    so the second channel would be summed or discarded anyway.
+
+config HR_INPUT_AUX_FRAME_SAMPLES
+  int "Samples per channel per delivered frame"
+  default 480
+  range 32 480
+  help
+    480 samples at ~48 kHz is a 10 ms frame, matching the block geometry the
+    I2S backend uses for the BLE and USB paths. The upper bound is not just
+    that alignment: the I2S backend's block size is fixed at 480 samples
+    (AUDIO_BLOCK_SAMPLES in audio_backend_i2s.c), and it rejects with
+    -ENOTSUP any frame bigger than that, so a value above 480 here would
+    compile fine and then silently drop every AUX frame at runtime.
+
+config HR_INPUT_AUX_ADC_RESOLUTION
+  int "SAADC resolution (bits)"
+  default 12
+  range 8 14
+
+config HR_INPUT_AUX_SIGNAL_THRESHOLD
+  int "Peak amplitude (16-bit) that counts as signal present"
+  default 300
+  range 0 32767
+  help
+    The adapter reports itself unhealthy while the input is silent, so
+    source_manager's auto-fallback does not sit on a disconnected jack.
+    Raise this if front-end noise keeps it stuck healthy.
+
+config HR_INPUT_AUX_SILENCE_FRAMES
+  int "Consecutive silent frames before reporting unhealthy"
+  default 200
+
+config HR_INPUT_AUX_STACK_SIZE
+  int "AUX sampling thread stack size"
+  default 2048
+  range 1024 8192
+
+config HR_INPUT_AUX_THREAD_PRIORITY
+  int "AUX sampling thread priority"
+  default 5
+
+endif # HR_INPUT_AUX
+
+config HR_INPUT_USB
+  bool "Enable USB Audio Class input adapter"
   default n
 
-config HR_INPUT_USB_C
-  bool "Enable USB Type-C UAC input adapter"
-  default n
+if HR_INPUT_USB
 
-if HR_INPUT_USB_C
+config HR_INPUT_USB_UAC2
+  bool "Enumerate as a USB Audio Class 2 device"
+  default y
+  select USB_DEVICE_STACK_NEXT
+  select USBD_AUDIO2_CLASS
+  help
+    Implements a real USB Audio Class 2 playback device, so a host (a phone
+    in USB OTG mode, or a PC) sees the board as a USB sound card and can
+    stream to it with no drivers, no app and no pairing. Requires the
+    "zephyr,uac2" node in the board overlay and the nRF USB connector (not
+    the debug/J-Link one). Disable to use the mock feeder instead.
 
-config HR_INPUT_USB_C_RING_BUFFER_BYTES
-  int "USB-C PCM ring buffer size (bytes)"
+config HR_INPUT_USB_RING_BUFFER_BYTES
+  int "USB PCM ring buffer size (bytes)"
   default 8192
   range 512 65536
 
-config HR_INPUT_USB_C_FRAME_BYTES
-  int "USB-C poll frame size (bytes)"
+config HR_INPUT_USB_FRAME_BYTES
+  int "USB poll frame size (bytes)"
   default 240
   range 48 2048
 
-config HR_INPUT_USB_C_SAMPLE_RATE_HZ
-  int "USB-C PCM sample rate"
+config HR_INPUT_USB_SAMPLE_RATE_HZ
+  int "USB PCM sample rate"
   default 48000
 
-config HR_INPUT_USB_C_CHANNELS
-  int "USB-C PCM channels"
+config HR_INPUT_USB_CHANNELS
+  int "USB PCM channels"
   default 2
   range 1 8
 
-config HR_INPUT_USB_C_BITS_PER_SAMPLE
-  int "USB-C PCM bits per sample"
+config HR_INPUT_USB_BITS_PER_SAMPLE
+  int "USB PCM bits per sample"
   default 16
   range 8 32
 
-config HR_INPUT_USB_C_MOCK_FEEDER
-  bool "Enable mock USB-C PCM feeder thread"
+config HR_INPUT_USB_MOCK_FEEDER
+  bool "Enable mock USB PCM feeder thread"
   default n
 
-if HR_INPUT_USB_C_MOCK_FEEDER
+if HR_INPUT_USB_MOCK_FEEDER
 
-config HR_INPUT_USB_C_MOCK_INTERVAL_MS
+config HR_INPUT_USB_MOCK_INTERVAL_MS
   int "Mock feeder interval (ms)"
   default 10
   range 1 1000
 
-config HR_INPUT_USB_C_MOCK_CHUNK_BYTES
+config HR_INPUT_USB_MOCK_CHUNK_BYTES
   int "Mock feeder bytes per interval"
   default 240
   range 48 2048
 
-config HR_INPUT_USB_C_MOCK_STACK_SIZE
+config HR_INPUT_USB_MOCK_STACK_SIZE
   int "Mock feeder thread stack size"
   default 1024
   range 512 4096

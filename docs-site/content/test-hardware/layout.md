@@ -13,21 +13,6 @@ flowchart LR
     AUX[AUX Source\noptional] --> DK
 ```
 
-```text
-+-----------------------+      USB      +----------------------+
-| Host PC (Linux/macOS) | <-----------> | nRF5340 DK (target)  |
-| - west build/flash    |               | - Zephyr app         |
-| - UART terminal       |               | - logging / routing  |
-+-----------------------+               +----------+-----------+
-                                                    |
-                                                    | Audio out (future backend)
-                                                    v
-                                           +----------------------+
-                                           | Speaker / Analyzer   |
-                                           | (optional in MVP)    |
-                                           +----------------------+
-```
-
 ## 1.1) Connection map
 
 - Host PC USB port ↔ nRF5340 DK debug USB port
@@ -47,7 +32,7 @@ flowchart LR
 ### Variant A: Hardware-minimal (fast iteration)
 
 - USB only (power + flash + logs)
-- Enable USB-C mock feeder config for synthetic audio frames
+- Enable USB mock feeder config for synthetic audio frames
 - No external audio peripherals required
 
 ### Variant B: AUX validation
@@ -58,7 +43,7 @@ flowchart LR
 
 ### Variant C: Mixed switching behavior
 
-- Keep mock USB-C feeder enabled
+- Keep mock USB feeder enabled
 - Attach AUX source
 - Exercise source policy fallback and manual override behavior
 

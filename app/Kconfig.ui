@@ -1,0 +1,51 @@
+menu "User Interface"
+
+config HR_UI_SOURCE_CONTROL
+  bool "Front-panel source button and LEDs"
+  select GPIO
+  default y
+  help
+    Cycles the active input with the board button (sw0), lights one LED per
+    source, and announces the change through the speaker. This is what makes
+    the device usable standalone: without it the only way to change source is
+    source_manager's automatic health-based fallback, since nothing else calls
+    source_manager_select().
+
+    Requires the board to provide the sw0 and led0..led3 aliases, which the
+    nRF5340 DK does.
+
+if HR_UI_SOURCE_CONTROL
+
+config HR_UI_AUDIO_CUE
+  bool "Announce the active source with a beep pattern"
+  default y
+  help
+    Plays a short pattern identifying the new source: 1 beep for BLE, 2 for
+    USB, 3 for AUX, 4 for Wi-Fi, 5 for none. Pitch differs per source as well,
+    so a cue is recognisable without counting.
+
+    The cue is written straight to the output backend rather than through
+    source_manager, so it is heard whichever input is active. Input frames are
+    dropped for its duration so the two are not interleaved.
+
+config HR_UI_DEBOUNCE_MS
+  int "Button debounce (ms)"
+  default 40
+  range 5 250
+
+config HR_UI_STACK_SIZE
+  int "UI thread stack size"
+  default 2048
+  range 1024 8192
+  help
+    The press is handled on its own thread because announcing the source means
+    sleeping for the length of the cue; doing that on the system workqueue
+    would stall Bluetooth and USB work items.
+
+config HR_UI_THREAD_PRIORITY
+  int "UI thread priority"
+  default 7
+
+endif # HR_UI_SOURCE_CONTROL
+
+endmenu

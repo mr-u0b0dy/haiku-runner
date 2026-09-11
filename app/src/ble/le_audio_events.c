@@ -1,3 +1,4 @@
+#include "le_audio_events.h"
 #include "le_audio_sink.h"
 #include "source_manager.h"
 

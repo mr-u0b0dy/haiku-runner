@@ -5,12 +5,16 @@
 #include "input_adapters.h"
 #include "source_manager.h"
 
+#if defined(CONFIG_HR_UI_SOURCE_CONTROL)
+#include "source_control.h"
+#endif
+
 LOG_MODULE_REGISTER(haiku_runner, LOG_LEVEL_INF);
 
 #if defined(CONFIG_HR_DEFAULT_INPUT_AUX)
 #define HR_DEFAULT_INPUT AUDIO_INPUT_AUX
-#elif defined(CONFIG_HR_DEFAULT_INPUT_USB_C)
-#define HR_DEFAULT_INPUT AUDIO_INPUT_USB_C
+#elif defined(CONFIG_HR_DEFAULT_INPUT_USB)
+#define HR_DEFAULT_INPUT AUDIO_INPUT_USB
 #elif defined(CONFIG_HR_DEFAULT_INPUT_WIFI)
 #define HR_DEFAULT_INPUT AUDIO_INPUT_WIFI
 #else
@@ -35,8 +39,8 @@ static void register_enabled_inputs(void)
 #if defined(CONFIG_HR_INPUT_AUX)
   (void)input_adapter_aux_register();
 #endif
-#if defined(CONFIG_HR_INPUT_USB_C)
-  (void)input_adapter_usb_c_register();
+#if defined(CONFIG_HR_INPUT_USB)
+  (void)input_adapter_usb_register();
 #endif
 #if defined(CONFIG_HR_INPUT_WIFI)
   (void)input_adapter_wifi_register();
@@ -64,8 +68,22 @@ int main(void)
     return -1;
   }
 
+#if defined(CONFIG_HR_UI_SOURCE_CONTROL)
+  /* After the adapters are registered, so the button cycles what this build
+   * actually contains. */
+  if (source_control_init() != 0) {
+    LOG_WRN("source control unavailable");
+  }
+#endif
+
   while (true) {
     source_manager_tick();
+
+#if defined(CONFIG_HR_UI_SOURCE_CONTROL)
+    /* Keeps the LEDs following automatic fallback too, not just presses. */
+    source_control_refresh();
+#endif
+
     k_sleep(K_MSEC(200));
   }
 }
