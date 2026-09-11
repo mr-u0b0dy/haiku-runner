@@ -73,7 +73,8 @@ directly with:
 west build -b nrf5340dk/nrf5340/cpuapp app --sysbuild -- -Dapp_EXTRA_CONF_FILE=configs/i2s-ble.conf
 ```
 
-See `docs-site/content/build.md` for full build details and the complete fragment list.
+See `docs-site/content/build.md` for full build details, the complete fragment list, and VS Code /
+Neovim debug setup.
 See `docs-site/content/test-hardware/index.md` for test bench documentation.
 See `docs-site/content/test-hardware/max98357a-wiring.md` for MAX98357A I2S amp board-to-module wiring.
 

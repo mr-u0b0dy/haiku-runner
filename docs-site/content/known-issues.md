@@ -54,9 +54,14 @@ With `CONFIG_HR_INPUT_AUX=y` and nothing connected, the floating ADC pin reads e
 
 **Do not enable AUX until the analog front-end is built.** Raising `CONFIG_HR_INPUT_AUX_SIGNAL_THRESHOLD` mitigates it, but the real answer is a biased, filtered, low-impedance front-end.
 
-### Volume control is reported but not applied
+### GAIN pin tied to a different rail than VIN produces an undefined gain state
 
-VCS is registered and volume changes from the phone are acknowledged and logged, but nothing scales the PCM. The MAX98357A has fixed analog gain, so applying volume means digital scaling in the pipeline.
+A logic-analyzer capture on `OUT+`/`OUT-` during live playback at max device volume (12.5 MS/s analog, probed directly at the amp's speaker terminals) showed the switching waveform topping out around **3.26 V**, well below what a `5V`-supplied MAX98357A can swing. On the build measured, `VIN` was confirmed on `5V` — so this isn't a supply-headroom problem. The actual cause: `GAIN` (a static 5-level strap pin whose recognized states — `GND`/`100kΩ`-to-`GND`/floating/`100kΩ`-to-`VDD`/`VDD` — are all referenced to `VIN`) was wired to the DK's independent `3V3` pin instead. At `VIN` = 5V, `3V3` is 66% of `VDD`, which lands between the "floating" and "tied-to-`VDD`" states — an undefined gain configuration outside the datasheet's operating points, not any single documented gain value. Plausible explanation for a report of worse sound quality at high volume than the same speaker driven by a different device. **Fix is rewiring `GAIN` to `GND`, floating, or the same `VIN` net** — see [MAX98357A Wiring](/test-hardware/max98357a-wiring#confirmed-case-gain-pin-tied-to-a-different-rail-than-vin).
+
+Two firmware changes reduce the impact of gain-staging problems like this regardless of root cause, but don't replace fixing the wiring:
+
+- `volume_control` now soft-limits digital peaks above 80% of full scale (`LIMITER_KNEE` in `volume_control.c`) instead of passing hot source material straight through, so already-near-0-dBFS content doesn't slam a squared-off waveform into whatever headroom actually exists.
+- The BLE VCS default (and therefore `volume_control`'s boot-time gain) was `100/255` (~-8 dB) — an arbitrary leftover from before VCS volume was actually applied to the PCM stream. Since that gain is shared by every source (not just BLE), this was quietly attenuating USB and AUX by ~8 dB too, any time `CONFIG_HR_INPUT_BLE=y` (the default), regardless of whether a phone was even connected. Fixed to `255/255` (unity) in both places.
 
 ### Switching sources causes an audible discontinuity
 

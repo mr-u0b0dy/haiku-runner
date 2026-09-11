@@ -8,6 +8,7 @@ target_sources(app PRIVATE
   src/main.c
   src/audio/audio_router.c
   src/audio/audio_pipeline_zephyr.c
+  src/audio/volume_control.c
   src/input/input_frame_ingress.c
   src/input/input_registry.c
   src/input/source_manager.c

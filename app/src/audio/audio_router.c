@@ -2,6 +2,7 @@
 
 #include "audio_router.h"
 #include "audio_pipeline.h"
+#include "volume_control.h"
 
 #if defined(CONFIG_HR_UI_AUDIO_CUE)
 #include "audio_cue.h"
@@ -31,6 +32,10 @@ int audio_router_submit(const struct audio_frame *frame)
     return -EBUSY;
   }
 #endif
+
+  /* Applied here, not per-adapter, so every source shares one volume setting
+   * and audio_cue (which writes straight to the backend) stays unaffected. */
+  volume_control_apply(frame);
 
   return audio_pipeline_push(frame);
 }

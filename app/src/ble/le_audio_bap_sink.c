@@ -29,6 +29,7 @@
 #include "le_audio_bap_sink.h"
 #include "le_audio_events.h"
 #include "le_audio_sink.h"
+#include "volume_control.h"
 
 LOG_MODULE_REGISTER(le_audio_bap_sink, LOG_LEVEL_INF);
 
@@ -402,9 +403,12 @@ static void vcs_state_cb(struct bt_conn *conn, int err, uint8_t volume, uint8_t 
 		return;
 	}
 
-	/* Reported only. The MAX98357A has a fixed analog gain and the I2S
-	 * path does no digital scaling yet, so remote volume changes are
-	 * acknowledged but not yet applied to the PCM stream. */
+	/* The MAX98357A has fixed analog gain, so applying volume means
+	 * scaling the PCM digitally - volume_control does that in
+	 * audio_router, ahead of whichever backend is compiled in. */
+	volume_control_set(volume);
+	volume_control_set_mute(mute == BT_VCP_STATE_MUTED);
+
 	LOG_INF("VCS volume %u, mute %u", volume, mute);
 }
 
@@ -430,9 +434,18 @@ static int vcp_init(void)
 	struct bt_vcp_vol_rend_register_param param = {
 		.step = 1U,
 		.mute = BT_VCP_STATE_UNMUTED,
-		.volume = 100U,
+		/* Full scale: this gain applies to every source, not just BLE
+		 * (see volume_control.c), so starting anywhere below unity
+		 * would quietly attenuate USB/AUX too whenever this adapter is
+		 * compiled in, before any phone has connected at all. */
+		.volume = 255U,
 		.cb = &vcp_cbs,
 	};
+
+	/* Keep the digital gain in step with the state advertised to a phone
+	 * before any connects, so what it displays matches what plays. */
+	volume_control_set(param.volume);
+	volume_control_set_mute(param.mute == BT_VCP_STATE_MUTED);
 
 	return bt_vcp_vol_rend_register(&param);
 }

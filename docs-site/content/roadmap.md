@@ -34,10 +34,6 @@ Move AUX capture to `nrfx` with chained buffers so sampling never pauses between
 
 A resampler between capture and playback would let AUX run at full bandwidth without the 0.8% clock mismatch, and would decouple every input's native rate from the output clock. This is the single change that most improves audio correctness across all three inputs.
 
-### Apply VCP volume to the PCM stream
-
-Volume changes are acknowledged and ignored. Digital scaling in the pipeline would make the phone's volume control real.
-
 ### Automated tests
 
 `audio_input_ops`, `audio_backend` and `input_frame_ingress` are narrow, mockable interfaces. Unit tests for frame ingress validation, source arbitration and fallback would catch pipeline regressions that manual log-reading will not.

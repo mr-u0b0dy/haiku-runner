@@ -10,6 +10,7 @@ What actually works, what is built but unproven, and what is still a stub. "Veri
 | --- | --- | --- |
 | Dual-core BLE bring-up (net-core `hci_ipc`) | **Verified** | Boot log shows HCI transport IPC, controller identity, advertising |
 | LE Audio unicast sink (PACS/ASCS/CAS/VCS/TMAS) | **Partly verified** | A phone bonds and discovers all five services; no audio stream ever established |
+| Digital volume control (`volume_control`, driven by VCS) | **Unverified** | Scales PCM in `audio_router` for every source; the VCS write path itself is still unverified, since no LE Audio stream has been confirmed (see the row above) |
 | USB Audio Class 2 input | **Verified end to end** | Enumerates as an ALSA card; tone confirmed audible from the amplifier |
 | I2S output backend | **Verified end to end** | Same test; 70 s continuous playback with zero underruns |
 | I2S self-test melody | **Verified** | Pre-existing bring-up path |

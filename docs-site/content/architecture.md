@@ -10,8 +10,9 @@ flowchart LR
     USB["USB\n(UAC2 device)"] --> SM
     AUX["AUX\n(SAADC)"] --> SM
     WIFI["Wi-Fi\n(stub)"] --> SM
-    SM["source_manager\n(arbitration)"] --> AR["audio_router\n(forward)"]
+    SM["source_manager\n(arbitration)"] --> AR["audio_router\n(volume + forward)"]
     AR --> AB["audio_backend\n(stub | i2s)"]
+    VC["volume_control\n(VCS-driven gain)"] -. scales in place .-> AR
     AB --> I2S["I2S"] --> AMP["amp"]
     SC["source_control\n(button + LEDs)"] -- select --> SM
     SC -- announce --> AC["audio_cue"]
@@ -21,7 +22,7 @@ flowchart LR
 
 1. **Input adapters** produce `audio_frame` packets and hand them to `input_frame_ingress`.
 2. **`source_manager`** decides which single input is live and drops frames from the others.
-3. **`audio_router`** forwards accepted frames to the backend.
+3. **`audio_router`** applies the current digital volume, then forwards accepted frames to the backend.
 4. **`audio_backend`** drives physical output — the stub (silent) or real I2S.
 
 ## Layers in detail
@@ -42,6 +43,14 @@ They all deliver audio through the same helper, `input_frame_ingress_deliver()`,
 `source_manager` holds a `source_policy`: a preferred input, a mode, and whether automatic fallback is allowed. On each tick it polls the adapters, then prefers the selected source when healthy, keeps the current one while it stays healthy, and otherwise falls back to any healthy source. "Healthy" is adapter-defined and meaningful — a live BLE stream, an enabled USB terminal, an AUX input above the silence threshold.
 
 `source_manager_on_frame()` discards frames from any source that is not active, which is what allows several inputs to be compiled in and running simultaneously without contending for the output.
+
+### Volume control
+
+`volume_control` is a single digital gain stage applied in `audio_router_submit()`, ahead of every source rather than per-adapter, so one setting covers whichever input is active. It exists because the MAX98357A has fixed analog gain — "volume" can only ever mean scaling the PCM.
+
+Its scale matches the Bluetooth VCS `Volume_Setting` field (0 silent, 255 unity), because the BLE input's VCP Volume Renderer (`vcs_state_cb` in `le_audio_bap_sink.c`) is currently its only real-world driver: a phone's volume slider writes VCS state, and that callback now calls `volume_control_set()`/`volume_control_set_mute()` instead of only logging. USB and AUX have no volume source of their own, so they play at whatever `volume_control` is currently set to — full scale until a BLE client changes it.
+
+`audio_cue` bypasses this entirely, writing straight to `audio_backend` at its own fixed amplitude, so the source-change announcement stays audible however the user's volume is set.
 
 ### Output backend
 
